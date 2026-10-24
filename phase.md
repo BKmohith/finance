@@ -1,4 +1,4 @@
-# Paytm Sahayak (सहायक): Phased Implementation Blueprint
+# Sahayak (सहायक): Phased Implementation Blueprint
 ## Autonomous Predictive Cash-Flow & Operational Copilot for 30 Million Indian Retailers
 ### Target Problem Statement: F-03 (Predictive Cash-Flow Management for Small Businesses)
 
@@ -349,6 +349,14 @@
 | :---: | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Outflow & Price-Shield MVP** | Paper bill OCR, due dates, margin defense alerts | FastAPI, Gemini 1.5 Flash, PostgreSQL 16 RLS | $\ge 95\%$ bill accuracy, $<15\text{s}$ turnaround |
 | **Phase 2** | **Inflow Rails & Voice Khata** | Soundbox MQTT, Voice Khata, Jev spam filter, FIFO | EMQX, Jev (ONNX CPU), Sarvam STT, Redis Streams | Soundbox ACK $<250\text{ms}$, Jev drop $<20\text{ms}$ |
+| **Phase 3** | **Predictive Cash-Flow Engine** | 30d cash curve, What-If simulator, trade-off matrix | NumPy, LangGraph, Pydantic Tools, Celery Beat | Shortfall accuracy $\ge 92\%$, Simulation $<1.5\text{s}$ |
+| **Phase 4** | **Launch, Audio & Statutory WORM** | Soundbox audio storyteller, WORM log, Paytm credit | Edge MQTT Audio, SHA-256 SQL Triggers, OTel | Audio start $<500\text{ms}$, 99.95% uptime |
+
+---
+
+> **Governance Protocol:**  
+> Zero code leaks across boundaries. No Phase 2 code is merged until Phase 1 passes all automated acceptance tests and receives formal stakeholder sign-off.
+ox MQTT, Voice Khata, Jev spam filter, FIFO | EMQX, Jev (ONNX CPU), Sarvam STT, Redis Streams | Soundbox ACK $<250\text{ms}$, Jev drop $<20\text{ms}$ |
 | **Phase 3** | **Predictive Cash-Flow Engine** | 30d cash curve, What-If simulator, trade-off matrix | NumPy, LangGraph, Pydantic Tools, Celery Beat | Shortfall accuracy $\ge 92\%$, Simulation $<1.5\text{s}$ |
 | **Phase 4** | **Launch, Audio & Statutory WORM** | Soundbox audio storyteller, WORM log, Paytm credit | Edge MQTT Audio, SHA-256 SQL Triggers, OTel | Audio start $<500\text{ms}$, 99.95% uptime |
 

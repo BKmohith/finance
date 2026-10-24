@@ -149,8 +149,11 @@ def send_telegram_text(chat_id: int | str, text: str):
     if not settings.TELEGRAM_BOT_TOKEN or settings.TELEGRAM_BOT_TOKEN.startswith("mock_"):
         return
     url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    clean_id = str(chat_id).replace("M_TG_", "").strip()
     try:
-        httpx.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}, timeout=4.0)
+        resp = httpx.post(url, json={"chat_id": clean_id, "text": text, "parse_mode": "Markdown"}, timeout=5.0)
+        if resp.status_code != 200:
+            httpx.post(url, json={"chat_id": clean_id, "text": text}, timeout=5.0)
     except Exception as e:
         logger.warning(f"Could not send Telegram reply: {e}")
 
@@ -336,54 +339,101 @@ async def simulator_process_bill(req: SimulatorProcessRequest):
     from app.db.session import get_rls_session
     from app.db import repository, margin_guard
 
-    # 1. Fetch image bytes
-    if req.image_base64:
-        raw_b64 = req.image_base64.split(",")[-1]
-        img_bytes = base64.b64decode(raw_b64)
-    else:
-        fixtures_dir = Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures" / "bills"
-        target_path = fixtures_dir / req.bill_filename
-        if not target_path.exists():
-            target_path = fixtures_dir / "sample_bill_SBT_2026_081.jpg"
-        img_bytes = target_path.read_bytes()
+    try:
+        # 1. Fetch image bytes
+        if req.image_base64:
+            raw_b64 = req.image_base64.split(",")[-1]
+            img_bytes = base64.b64decode(raw_b64)
+        else:
+            fixtures_dir = Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures" / "bills"
+            target_path = fixtures_dir / req.bill_filename
+            if not target_path.exists():
+                target_path = fixtures_dir / "sample_bill_SBT_2026_081.jpg"
+            img_bytes = target_path.read_bytes()
 
-    # 2. OpenCV Preprocess
-    clean_bytes = preprocess_bill_image(img_bytes)
+        # 2. OpenCV Preprocess
+        clean_bytes = preprocess_bill_image(img_bytes)
 
-    # 3. Gemini Vision OCR
-    extracted_data = extract_invoice_from_image(clean_bytes)
+        # 3. Gemini Vision OCR
+        extracted_data = extract_invoice_from_image(clean_bytes)
 
-    # Optional simulation of a wholesale hike for demo comparison
-    if req.hike_simulation and extracted_data.items:
-        # Increase first item by 5.5%
-        first_item = extracted_data.items[0]
-        first_item.unit_wholesale_rate = round(first_item.unit_wholesale_rate * 1.055, 2)
-        first_item.line_total = round(first_item.unit_wholesale_rate * first_item.quantity, 2)
-        extracted_data.grand_total = sum(i.line_total for i in extracted_data.items)
+        # Optional simulation of a wholesale hike for demo comparison
+        original_rate = None
+        if req.hike_simulation and extracted_data.items:
+            first_item = extracted_data.items[0]
+            original_rate = first_item.unit_wholesale_rate
+            first_item.unit_wholesale_rate = round(first_item.unit_wholesale_rate * 1.055, 2)
+            first_item.line_total = round(first_item.unit_wholesale_rate * first_item.quantity, 2)
+            extracted_data.grand_total = sum(i.line_total for i in extracted_data.items)
 
-    # 4. Arithmetic Guardrails
-    validated_data, guardrail_summary = validate_invoice_arithmetic(extracted_data, raise_on_failure=True)
+        # 4. Arithmetic Guardrails
+        validated_data, guardrail_summary = validate_invoice_arithmetic(extracted_data, raise_on_failure=True)
 
-    # 5. Supabase Transactional Write with RLS
-    with get_rls_session(req.merchant_id) as session:
-        inv = repository.save_extracted_invoice(session, req.merchant_id, validated_data)
-        invoice_id = str(inv.id)
-        # 6. Margin-Guard Evaluation
-        alerts = margin_guard.evaluate_price_deviations(session, req.merchant_id, inv.id)
-        session.commit()
+        # 5. Supabase Transactional Write with RLS
+        with get_rls_session(req.merchant_id) as session:
+            # Ensure merchant exists before any price history seeding to satisfy foreign key constraints
+            repository.get_or_create_merchant(session=session, merchant_id=req.merchant_id)
 
-    total_latency_ms = (time.perf_counter() - start_time) * 1000
+            # If simulating a hike and merchant has no prior history for this item,
+            # seed the pre-hike rate so Margin-Guard detects the increase!
+            if req.hike_simulation and original_rate and validated_data.items:
+                from app.db.models import PriceHistory
+                from sqlalchemy import select, and_, func
+                from datetime import datetime, timedelta
+                existing_price = session.execute(
+                    select(PriceHistory).where(
+                        and_(
+                            PriceHistory.merchant_id == req.merchant_id,
+                            func.lower(func.trim(PriceHistory.item_name)) == func.lower(func.trim(validated_data.items[0].item_name))
+                        )
+                    )
+                ).scalars().first()
+                if not existing_price:
+                    baseline_entry = PriceHistory(
+                        merchant_id=req.merchant_id,
+                        item_name=validated_data.items[0].item_name,
+                        unit_wholesale_rate=original_rate,
+                        recorded_at=datetime.utcnow() - timedelta(days=7)
+                    )
+                    session.add(baseline_entry)
+                    session.flush()
 
-    return {
-        "status": "SUCCESS",
-        "merchant_id": req.merchant_id,
-        "invoice_id": invoice_id,
-        "invoice_number": validated_data.invoice_number,
-        "supplier_name": validated_data.supplier_name,
-        "supplier_gstin": validated_data.supplier_gstin,
-        "grand_total": validated_data.grand_total,
-        "confidence_score": validated_data.confidence_score,
-        "line_items": [i.model_dump() for i in validated_data.items],
-        "margin_alerts": [a.model_dump() for a in alerts],
-        "latency_ms": round(total_latency_ms, 2)
-    }
+            inv = repository.save_extracted_invoice(session, req.merchant_id, validated_data)
+            invoice_id = str(inv.id)
+            # 6. Margin-Guard Evaluation
+            alerts = margin_guard.evaluate_price_deviations(session, req.merchant_id, inv.id)
+            session.commit()
+
+            if alerts:
+                try:
+                    from app.api.notifier import whatsapp_notifier
+                    for alert in alerts:
+                        alert.merchant_phone = str(req.merchant_id).replace("M_TG_", "")
+                        whatsapp_notifier.send_price_shield_alert(alert)
+                except Exception as notif_err:
+                    logger.warning(f"Simulator alert dispatch warning: {notif_err}")
+
+        total_latency_ms = (time.perf_counter() - start_time) * 1000
+
+        return {
+            "status": "SUCCESS",
+            "merchant_id": req.merchant_id,
+            "invoice_id": invoice_id,
+            "invoice_number": validated_data.invoice_number,
+            "supplier_name": validated_data.supplier_name,
+            "supplier_gstin": validated_data.supplier_gstin,
+            "grand_total": validated_data.grand_total,
+            "confidence_score": validated_data.confidence_score,
+            "line_items": [i.model_dump() for i in validated_data.items],
+            "margin_alerts": [a.model_dump() for a in alerts],
+            "latency_ms": round(total_latency_ms, 2)
+        }
+    except Exception as exc:
+        total_latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.error("Simulator pipeline execution failed: %s", exc, exc_info=True)
+        return {
+            "status": "ERROR",
+            "error": str(exc),
+            "merchant_id": req.merchant_id,
+            "latency_ms": round(total_latency_ms, 2)
+        }

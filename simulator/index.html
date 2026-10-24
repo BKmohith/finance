@@ -382,6 +382,7 @@
           <label>Select Wholesale Bill Image Fixture</label>
           <select id="directBillSelect">
             <option value="sample_bill_SBT_2026_081.jpg">SBT-2026-081: Shree Balaji Traders (Baseline: Oil @ ₹110, Atta @ ₹380)</option>
+            <option value="sample_bill_SBT_2026_082_hike.jpg">SBT-2026-082 (Rate Spike): Shree Balaji Traders (Oil @ ₹190 [+72.7%], Atta @ ₹400 [+5.3%])</option>
             <option value="sample_bill_SBT_2026_082_skewed.jpg">SBT-2026-082 (Skewed): Faint Dot-Matrix Dot Ribbon Bill</option>
           </select>
         </div>
@@ -588,9 +589,12 @@
           if (data.margin_alerts && data.margin_alerts.length > 0) {
             data.margin_alerts.forEach(alert => {
               log(`🚨 Margin-Guard Alert for ${alert.item_name}: Wholesale rate +${alert.percentage_hike}%!`);
+              const suppStr = alert.supplier_name ? `🏢 *Distributor:* ${alert.supplier_name}\n` : '';
               const alertMsg = `🚨 *Sahayak Price-Shield Alert* 🚨\n` +
-                `Wholesale cost for *${alert.item_name}* rose from ₹${alert.old_wholesale_rate} to ₹${alert.new_wholesale_rate} (+${alert.percentage_hike}%).\n\n` +
-                `📉 Projected Monthly Loss: ₹${alert.estimated_loss_if_unchanged}\n` +
+                suppStr +
+                `Wholesale cost for *${alert.item_name}* rose from ₹${alert.old_wholesale_rate} to ₹${alert.new_wholesale_rate} (*+${alert.percentage_hike}%*).\n\n` +
+                `📉 Projected Order Loss: ₹${alert.estimated_loss_if_unchanged}\n` +
+                `🏷️ Previous MRP: ₹${alert.previous_mrp}\n` +
                 `💡 *Suggested Shelf MRP:* ₹${alert.suggested_new_mrp} (Protects 10-12% gross margin)`;
               addMessage(alertMsg, 'bubble alert');
             });

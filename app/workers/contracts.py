@@ -35,7 +35,7 @@ class ExtractedInvoiceData(BaseModel):
 # 3. Price-Shield Deviation Alert (Handoff to Laptop 1 & 2)
 class PriceHikeAlert(BaseModel):
     merchant_id: str
-    merchant_phone: str
+    merchant_phone: Optional[str] = None
     item_name: str
     old_wholesale_rate: float
     new_wholesale_rate: float

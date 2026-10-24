@@ -58,42 +58,47 @@ class AlertNotifier:
         """
         Sends an alert message via Telegram Bot API.
         """
+        clean_chat_id = str(chat_id).replace("M_TG_", "").strip()
         message_text = self.format_alert_message(alert)
         payload = {
-            "chat_id": chat_id,
+            "chat_id": clean_chat_id,
             "text": message_text,
             "parse_mode": "Markdown"
         }
 
         # Mock fallback for test environment
         if not self.telegram_token or self.telegram_token.startswith("mock_"):
-            logger.info(f"[MOCK TELEGRAM OUTBOUND] Delivered alert to chat {chat_id}:\n{message_text}")
+            logger.info(f"[MOCK TELEGRAM OUTBOUND] Delivered alert to chat {clean_chat_id}:\n{message_text}")
             return {
                 "status": "mock_delivered",
                 "channel": "telegram",
-                "recipient": chat_id,
+                "recipient": clean_chat_id,
                 "message": message_text
             }
 
         try:
             http_client = client or httpx.Client(timeout=10.0)
             response = http_client.post(self.telegram_base_url, json=payload)
+            if response.status_code != 200:
+                logger.warning(f"Telegram Markdown parse failed ({response.text}); retrying plain text")
+                payload.pop("parse_mode", None)
+                response = http_client.post(self.telegram_base_url, json=payload)
             response.raise_for_status()
             data = response.json()
-            logger.info(f"Telegram alert dispatched to chat {chat_id}: {data}")
+            logger.info(f"Telegram alert dispatched to chat {clean_chat_id}: {data}")
             return {
                 "status": "delivered",
                 "channel": "telegram",
-                "recipient": chat_id,
+                "recipient": clean_chat_id,
                 "telegram_response": data
             }
         except httpx.HTTPError as exc:
-            logger.error(f"Failed to send Telegram alert to chat {chat_id}: {exc}")
+            logger.error(f"Failed to send Telegram alert to chat {clean_chat_id}: {exc}")
             return {
                 "status": "error",
                 "channel": "telegram",
                 "error": str(exc),
-                "recipient": chat_id
+                "recipient": clean_chat_id
             }
 
     def send_whatsapp_alert(
@@ -164,6 +169,8 @@ class AlertNotifier:
         if settings.NOTIFICATION_CHANNEL == "telegram":
             # Use merchant_phone as chat_id or merchant_id
             target_id = alert.merchant_phone or alert.merchant_id
+            if target_id:
+                target_id = str(target_id).replace("M_TG_", "").strip()
             return self.send_telegram_alert(target_id, alert, client=client)
         return self.send_whatsapp_alert(alert, client=client)
 

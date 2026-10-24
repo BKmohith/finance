@@ -11,6 +11,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import logging
 import os
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -73,14 +74,64 @@ async def telegram_long_poll_worker():
                             media_id = document.get("file_id")
                             media_hash = document.get("file_unique_id")
                         else:
-                            text = message.get("text", "")
-                            if text.startswith("/start"):
-                                send_telegram_text(
-                                    chat_id,
-                                    "✨ *Namaste! Welcome to Sahayak (सहायक)*\n\n"
-                                    "Your mobile copilot is active. Send a photo of your *wholesale paper bill* "
-                                    "to digitize rates and protect retail margins!"
-                                )
+                            text = message.get("text", "").strip()
+                            if text:
+                                if text.startswith("/simulate") or text.startswith("/test") or text.startswith("/hike"):
+                                    send_telegram_text(
+                                        chat_id,
+                                        "⚡ *Running Price-Shield Margin Simulation...*\nAnalyzing wholesale bill `sample_bill_SBT_2026_082_hike.jpg` against baseline wholesale history..."
+                                    )
+                                    async def _sim_tg(c_id):
+                                        try:
+                                            from app.workers.tasks import process_invoice_task
+                                            res = await asyncio.to_thread(
+                                                process_invoice_task,
+                                                merchant_id=f"M_TG_{c_id}",
+                                                media_id="sample_bill_SBT_2026_082_hike.jpg",
+                                                whatsapp_message_id=f"tg_sim_{c_id}_{int(time.time())}",
+                                                sender_phone=str(c_id)
+                                            )
+                                            alerts_cnt = res.get('alerts_count', 0)
+                                            send_telegram_text(
+                                                c_id,
+                                                f"✅ *Test Invoice {res.get('invoice_number', 'Digitized')} Logged!*\n\n"
+                                                f"📦 *Items Extracted:* {res.get('items_count', 0)} line items\n"
+                                                f"💰 *Grand Total:* ₹{res.get('grand_total', 0):,.2f}\n"
+                                                f"🛡️ *Alerts Detected:* {alerts_cnt}"
+                                            )
+                                            margin_alerts = res.get('margin_alerts', [])
+                                            for a_dict in margin_alerts:
+                                                try:
+                                                    from app.core.contracts import PriceHikeAlert
+                                                    from app.api.notifier import AlertNotifier
+                                                    a_obj = PriceHikeAlert.model_validate(a_dict)
+                                                    alert_text = AlertNotifier.format_alert_message(a_obj)
+                                                    send_telegram_text(c_id, alert_text)
+                                                except Exception as a_err:
+                                                    logger.warning(f"Could not format alert: {a_err}")
+                                        except Exception as err:
+                                            logger.error(f"Telegram simulation error: {err}")
+                                            send_telegram_text(c_id, f"⚠️ Simulation error: {err}")
+                                    asyncio.create_task(_sim_tg(chat_id))
+                                    continue
+                                elif text.startswith("/start") or text.startswith("/help"):
+                                    send_telegram_text(
+                                        chat_id,
+                                        "✨ *Namaste! Welcome to Sahayak (सहायक)*\n\n"
+                                        "I am your AI retail copilot.\n"
+                                        "📸 *Snap & send a photo* of any wholesale invoice to automatically:\n"
+                                        " • Digitize FMCG items with Gemini Flash Vision\n"
+                                        " • Audit GST & line-item arithmetic\n"
+                                        " • Trigger *Price-Shield Alerts* if wholesale costs increase\n\n"
+                                        "💡 *Quick Test:* Send `/simulate` to test an instant price-spike alert!"
+                                    )
+                                    continue
+                                else:
+                                    send_telegram_text(
+                                        chat_id,
+                                        "📸 Please send a photo of your *wholesale paper invoice*, or reply `/simulate` to test a live Price-Shield alert!"
+                                    )
+                                    continue
                             continue
 
                         # Process bill photo
@@ -109,19 +160,41 @@ async def telegram_long_poll_worker():
                                         whatsapp_message_id=f"tg_{m_hash}",
                                         sender_phone=str(c_id)
                                     )
+                                    alerts_cnt = res.get('alerts_count', 0)
+                                    mg_status = (
+                                        f"🛡️ *Margin-Guard:* 🚨 *{alerts_cnt} Price Spike Alert(s) Detected!* Shelf recommendations dispatched."
+                                        if alerts_cnt > 0
+                                        else "🛡️ *Margin-Guard:* Rates stable (<3% change). Margins protected."
+                                    )
                                     send_telegram_text(
                                         c_id,
                                         f"✅ *Invoice {res.get('invoice_number', 'Digitized')} Logged!*\n\n"
                                         f"📦 *Items Extracted:* {res.get('items_count', 0)} line items\n"
                                         f"💰 *Grand Total:* ₹{res.get('grand_total', 0):,.2f}\n"
                                         f"🔒 *Ledger Status:* Stored securely in Supabase PostgreSQL (RLS Active)\n"
-                                        f"🛡️ *Margin-Guard:* Checked against historical wholesale rates"
+                                        f"{mg_status}"
                                     )
+                                    margin_alerts = res.get('margin_alerts', [])
+                                    for a_dict in margin_alerts:
+                                        try:
+                                            from app.core.contracts import PriceHikeAlert
+                                            from app.api.notifier import AlertNotifier
+                                            a_obj = PriceHikeAlert.model_validate(a_dict)
+                                            alert_text = AlertNotifier.format_alert_message(a_obj)
+                                            send_telegram_text(c_id, alert_text)
+                                        except Exception as a_err:
+                                            logger.warning(f"Could not format alert: {a_err}")
                                 except Exception as exc:
                                     logger.error(f"Error processing Telegram invoice: {exc}")
                                     send_telegram_text(c_id, f"⚠️ Note: Invoice processed with note: {exc}")
 
                             asyncio.create_task(_process_tg(merchant_id, media_id, media_hash, chat_id))
+                elif response.status_code == 409:
+                    logger.warning("Telegram getUpdates 409 conflict. Waiting 4s for previous session to close...")
+                    await asyncio.sleep(4.0)
+                else:
+                    logger.warning(f"Telegram getUpdates returned status {response.status_code}. Sleeping 3s...")
+                    await asyncio.sleep(3.0)
             except asyncio.CancelledError:
                 logger.info("Telegram polling worker cancelled.")
                 break

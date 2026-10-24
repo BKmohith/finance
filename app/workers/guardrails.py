@@ -39,13 +39,28 @@ def validate_line_item_math(
     tolerance: float = 1.0,
 ) -> Tuple[bool, float, float]:
     """
-    Validates that: |quantity * unit_wholesale_rate - line_total| < tolerance.
+    Validates line item arithmetic:
+    1. Pre-tax: |quantity * unit_wholesale_rate - line_total| <= tolerance
+    2. Post-tax (GST-inclusive): |quantity * unit_wholesale_rate * (1 + tax_rate_pct/100) - line_total| <= tolerance
     Returns: (is_valid, expected_total, difference)
     """
-    expected = round(item.quantity * item.unit_wholesale_rate, 2)
-    diff = abs(expected - item.line_total)
-    is_valid = diff <= tolerance
-    return is_valid, expected, diff
+    expected_pre_tax = round(item.quantity * item.unit_wholesale_rate, 2)
+    diff_pre_tax = abs(expected_pre_tax - item.line_total)
+
+    if diff_pre_tax <= tolerance:
+        return True, expected_pre_tax, diff_pre_tax
+
+    # Check GST-inclusive line total if tax_rate_pct is present
+    tax_pct = getattr(item, "tax_rate_pct", 0.0) or 0.0
+    if tax_pct > 0.0:
+        expected_post_tax = round(expected_pre_tax * (1.0 + tax_pct / 100.0), 2)
+        diff_post_tax = abs(expected_post_tax - item.line_total)
+        if diff_post_tax <= tolerance:
+            return True, expected_post_tax, diff_post_tax
+        if diff_post_tax < diff_pre_tax:
+            return False, expected_post_tax, diff_post_tax
+
+    return False, expected_pre_tax, diff_pre_tax
 
 
 def validate_invoice_arithmetic(

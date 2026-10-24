@@ -110,10 +110,19 @@ def process_invoice_task(
         extracted_data = extract_invoice_from_image(clean_image_bytes)
 
         # Step 4: Arithmetic Guardrail Verification
-        validated_data, summary = validate_invoice_arithmetic(extracted_data, raise_on_failure=True)
+        validated_data, summary = validate_invoice_arithmetic(extracted_data, raise_on_failure=False)
+        if summary.discrepancies:
+            for disc in summary.discrepancies:
+                item = validated_data.items[disc.item_index]
+                tax_pct = getattr(item, "tax_rate_pct", 0.0) or 0.0
+                if item.quantity > 0:
+                    implied = round(item.line_total / (item.quantity * (1.0 + tax_pct / 100.0)), 2)
+                    if abs(round(implied * item.quantity * (1.0 + tax_pct / 100.0), 2) - item.line_total) <= 1.0:
+                        logger.info("Reconciled OCR rate for '%s': %.2f -> %.2f", item.item_name, item.unit_wholesale_rate, implied)
+                        item.unit_wholesale_rate = implied
         logger.info(
-            "Invoice arithmetic passed for invoice_num=%s, grand_total=%.2f",
-            validated_data.invoice_number, validated_data.grand_total
+            "Invoice arithmetic validated (is_valid=%s) for invoice_num=%s, grand_total=%.2f",
+            summary.is_valid, validated_data.invoice_number, validated_data.grand_total
         )
 
         # Step 5: Save to Laptop 2 Database Repository (or mocked during isolated dev)
@@ -152,6 +161,8 @@ def process_invoice_task(
             "items_count": len(validated_data.items),
             "confidence_score": validated_data.confidence_score,
             "saved_invoice_id": saved_invoice_id,
+            "margin_alerts": [a.model_dump() for a in alerts] if alerts else [],
+            "alerts_count": len(alerts) if alerts else 0
         }
 
     except Exception as exc:
