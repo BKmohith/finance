@@ -43,6 +43,9 @@ class PriceHikeAlert(BaseModel):
     previous_mrp: float
     suggested_new_mrp: float
     estimated_loss_if_unchanged: float
+    supplier_name: Optional[str] = None
+    rate_difference: Optional[float] = None
+    comparison_summary: Optional[str] = None
 
 
 # 4. Celery Task Contract

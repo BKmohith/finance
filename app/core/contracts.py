@@ -57,7 +57,10 @@ class PriceHikeAlert(BaseModel):
     percentage_hike: float = Field(description="Price increase percentage (e.g. 5.2%)")
     previous_mrp: float = Field(description="Existing retail shelf MRP")
     suggested_new_mrp: float = Field(description="Recommended shelf MRP to protect margin")
-    estimated_loss_if_unchanged: float = Field(default=0.0, description="Estimated monthly profit loss")
+    estimated_loss_if_unchanged: float
+    supplier_name: Optional[str] = None
+    rate_difference: Optional[float] = None
+    comparison_summary: Optional[str] = None = Field(default=0.0, description="Estimated monthly profit loss")
 
 
 # --- 4. Celery Task Contract (Used by Laptop 1 to dispatch, Laptop 3 to execute) ---
