@@ -9,8 +9,8 @@
 ```
                                     ┌────────────────────────────────────────────────────────┐
                                     │                 AMBIENT EDGE TOUCHPOINTS               │
-                                    │  • WhatsApp Cloud API (Photos & Vernacular Voice)      │
-                                    │  • Paytm Soundbox 4.0 MQTT Broker (<250ms)             │
+                                    │  • Telegram / WhatsApp Bot (Voice, Photos & Quick Sales)│
+                                    │  • Fast-Entry Counter POS Dashboard (Web / PWA)        │
                                     └──────────────────────────┬─────────────────────────────┘
                                                                │
                                                                ▼
@@ -116,14 +116,20 @@
 
 ---
 
-## Phase 2: Inflow Rails & Ambient Voice Khata (Counter Ingestion & Real-Time Balances)
+## Phase 2: Inflow Rails, Conversational Telegram Sales & Fast POS Dashboard (Real-Time Ingestion & FIFO Stock Depletion)
 
 ### 1. Working Milestone (Definition of Done)
+* **The Kirana Reality Check:** A raw Soundbox announcement (*"₹300 received on Paytm"*) has **zero SKU context**—it cannot differentiate whether a customer bought 1 bag of Atta, 3 soaps, or settled an old debt. Blind payment streams cannot predict stock depletion or track item-level margins. To automate FIFO inventory depletion and know true real-time cash flow, counter inputs must capture **Itemized Line Items** (`SKU`, `Quantity`, `Selling Rate`, `Payment Mode`).
 * **What works at the end of Phase 2:**
-  * Real-time customer QR payments confirmed on **Paytm Soundbox 4.0** stream directly into the PostgreSQL ledger via MQTT in **<250ms**.
-  * Merchant can record a 4-second vernacular voice note on WhatsApp (*"Sharma ji 500 udhaar"*); the system transcribes, extracts customer intent, updates customer credit ledgers in **<1.2s**, and sends an instant WhatsApp receipt to the customer.
-  * **System 1 (Jev Decision Engine)** is active at the front door, dropping spam and memes in **<20ms** without waking up expensive LLMs.
-  * Concurrency-safe FIFO inventory batch depletion runs with row-level database locks without negative stock.
+  * **Telegram Conversational Sales & Voice Input:** Merchant or counter helper sends quick text or vernacular voice notes on Telegram (e.g., *"25 bag atta sold at 450"*, *"5 packet amul butter cash"*, or *"Sharma ji 500 udhaar"*).
+  * In **<1.2s**, the system:
+    1. Transcribes & extracts structured sales entities (`item`, `quantity`, `unit_rate`, `payment_mode`, `customer`).
+    2. Resolves colloquial names (e.g., "atta") to exact catalog SKUs using **`pgvector`** semantic search combined with price heuristics.
+    3. Atomically depletes inventory using concurrency-safe FIFO batch locking (`FOR UPDATE`) with zero negative stock.
+    4. Computes instant **Realized Gross Margin** (Selling Rate vs FIFO Batch Cost ingested in Phase 1).
+  * **Ultra-Fast Counter Web Dashboard (PWA):** A lightweight, high-speed web interface with 1-tap quick buttons for top-moving items, rapid fuzzy search, and hotkey checkout for rush-hour counter sales.
+  * **System 1 (Jev Decision Engine):** Active at the Telegram/webhook gateway, dropping spam, memes, and non-business forwards in **<20ms** without waking up expensive LLMs.
+  * **Receivables & Khata Tracking:** For Udhaar sales (*"Sharma ji 500 udhaar"*), updates `customer_khata` and auto-dispatches an instant receipt/reminder via Telegram/WhatsApp.
 
 ---
 
@@ -131,12 +137,13 @@
 
 | Category | Component | Specification / Version | Role in Phase 2 |
 | :--- | :--- | :--- | :--- |
-| **IoT Edge Broker** | EMQX / Eclipse Mosquitto | MQTT 5.0 Broker | Ingests real-time payment events from Paytm Soundbox 4.0 hardware |
-| **System 1 Decision Engine** | Jev Engine | ONNX Runtime (CPU) | Sub-20ms spam/meme classification and typed intent routing |
-| **Speech-to-Text (STT)** | Sarvam AI / Deepgram Nova-2 | Indian Vernacular STT | Transcribes Hindi, Hinglish, and regional speech with background counter noise |
-| **Event Bus** | Redis Streams | Redis 7.2 | Decoupled event-driven pub/sub connecting inbound events to ledger workers |
-| **Database Engine** | PostgreSQL 16 | Row-Level Locks (`FOR UPDATE`) | Handles high-concurrency counter transactions with zero race conditions |
-| **Catalog Search** | `pgvector` | HNSW Index | Semantic matching of voice item names to store SKU catalog |
+| **Conversational Gateway** | Telegram Bot API | Python `aiogram` / Webhooks | Ingests instant text and vernacular voice sales notes with zero friction |
+| **Counter Interface** | Fast Counter POS Web Dashboard | FastAPI + Vanilla JS / SSE | Ultra-lightweight, 1-tap checkout dashboard for fast-moving counter rush-hour sales |
+| **System 1 Decision Engine** | Jev Engine | ONNX Runtime (CPU) | Sub-20ms spam/meme classification and typed intent routing (Sales vs Invoice vs Spam) |
+| **Speech & NLU Perception** | Sarvam AI / Fast NER + Gemini Flash | Indian Vernacular STT & Parser | Transcribes Hinglish voice notes & extracts item, qty, rate, and customer |
+| **Catalog Semantic Resolution** | `pgvector` | HNSW Index (Cosine Distance) | Resolves colloquial item names ("atta", "fortune 1L") to exact store SKUs |
+| **Event Bus & Buffering** | Redis Streams | Redis 7.2 | Decouples high-volume counter sales inputs from synchronous database transactions |
+| **ACID Inventory Ledger** | PostgreSQL 16 | Row-Level Locks (`FOR UPDATE`) | Concurrency-safe FIFO batch depletion, realized margin computation, and cash khata |
 
 ---
 
@@ -144,49 +151,69 @@
 
 1. **Jev Decision Engine (Agent 0):**
    * Quantized INT8 classification model deployed via ONNX Runtime on CPU.
-   * Evaluates incoming WhatsApp payloads in $<18\text{ms}$:
-     * Class A: Meme / Spam $\rightarrow$ HTTP 200, drop immediately ($0 cost).
-     * Class B: Voice Credit Note $\rightarrow$ Route to Agent 1 (Voice Khata).
-     * Class C: Paper Invoice $\rightarrow$ Route to Agent 2 (Invoice Ingestion).
-2. **Soundbox MQTT Pipeline:**
-   * Async MQTT client listening to topic `merchants/{merchant_id}/soundbox/payments`.
-   * Direct, non-LLM transactional write committing settled cash inflows directly to the PostgreSQL cash ledger in $<30\text{ms}$.
-3. **Agent 1: Voice Khata Engine:**
-   * Audio stream receiver converting WhatsApp OGG/Opus voice notes to WAV.
-   * Ingestion via Indian Vernacular STT (Hinglish/Hindi models).
-   * Regex & lightweight semantic entity extraction: Customer Name, Amount, Action (`DEBIT_CREDIT`).
-   * Commits to `customer_khata` table: Distinguishes **Expected Receivable** from **Settled Liquid Cash**.
-   * Sends polite WhatsApp receipt to the customer:
-     *`"Namaste Sharma ji, Ramesh Store par aapka ₹500 udhaar darj ho gaya hai. Kul baaki: ₹1,200."`*
-4. **Agent 4: Concurrency-Safe FIFO Inventory Depletion:**
-   * Row-locked database procedure:
+   * Evaluates incoming Telegram payloads in $<18\text{ms}$:
+     * Class A: Meme / Spam / Good Morning forward $\rightarrow$ Drop immediately ($0 cost).
+     * Class B: Conversational Sale / Credit Note $\rightarrow$ Route to Agent 1 (Sales & Khata Engine).
+     * Class C: Paper Invoice / Bill Photo $\rightarrow$ Route to Agent 2 (Invoice Ingestion from Phase 1).
+2. **Conversational Sales Parser & Semantic SKU Resolution (Agent 1):**
+   * Processes voice and text messages: e.g., *"25 bag atta sold at 450"*, *"3 amul butter 58 upi"*, *"Sharma ji 500 udhaar"*.
+   * STT converts voice notes (OGG/Opus) to text using Sarvam AI Saaras.
+   * Entity extraction parses:
+     - `sku_query`: "atta"
+     - `quantity`: 25
+     - `unit_price`: 450
+     - `payment_type`: CASH / UPI / UDHAAR
+     - `customer_name`: "Sharma ji" (if credit)
+   * **Semantic SKU Matcher (`pgvector`):**
+     - Embeds `sku_query` and executes nearest-neighbor search on `products.embedding` for the merchant.
+     - Matches "atta" at ₹450 to "Aashirvaad Shudh Chakki Atta 10kg" (ID: `SKU-AT-10K`).
+   * If Udhaar: Commits to `customer_khata` (distinguishes Expected Receivable from Settled Liquid Cash) and sends customer receipt.
+3. **High-Speed Counter POS Web Dashboard:**
+   * Clean, responsive web dashboard built for counter tablets, mobile, or desktop.
+   * Features:
+     - Top 20 fast-moving quick-tap buttons (Atta, Sugar, Oil, Milk, Bread, Biscuits).
+     - Real-time stock badge showing remaining FIFO units and current shelf price.
+     - Single-tap toggle for payment mode: `[Cash]` `[UPI]` `[Udhaar]`.
+     - Hotkey-driven keyboard interface (Enter to finalize, Space to toggle payment).
+4. **Concurrency-Safe FIFO Inventory Depletion & Margin Tracking (Agent 4):**
+   * Depletes oldest inventory batches first using row-level locks:
      ```sql
-     SELECT id, quantity FROM inventory_batches 
+     SELECT id, quantity, unit_purchase_price 
+     FROM inventory_batches 
      WHERE product_id = :p_id AND quantity > 0 
      ORDER BY expiry_date ASC, created_at ASC 
      FOR UPDATE;
      ```
-   * Depletes oldest batches first; guarantees inventory counts never fall below zero during peak checkout queues.
+   * Atomically decreases batch quantity without allowing negative stock.
+   * Calculates realized gross margin on the spot:
+     $$\text{Gross Profit} = \sum (\text{Selling Rate} - \text{Batch Purchase Cost}) \times \text{Depleted Qty}$$
+   * Logs transaction to `sales_transactions` and updates settled liquid cash/receivables.
 
 ---
 
 ### 4. Technical Challenges & Engineering Solutions
 
-* **Challenge 1: Counter Rush Hour Queue Pressure (6:00 PM – 10:00 PM)**
-  * *Problem:* Kirana checkout counters experience rapid bursts (3–5 customers shouting orders simultaneously). Soundbox confirmations must never lag, and database writes must not lock up the connection pool.
-  * *Solution:* Completely decouple payment confirmation from inventory updates. The MQTT broker sends an immediate lightweight ACK to the Soundbox in $<250\text{ms}$, then publishes an event to Redis Streams. Background workers process batch depletion asynchronously.
-* **Challenge 2: Noisy Counter Audio & Vernacular Accents**
-  * *Problem:* Ambient Kirana audio contains blaring horns, ceiling fan hum, and customer chatter. Shopkeepers speak colloquial mixed dialects (*"Sharma ji ka paanch sau khate me chadha do"*).
-  * *Solution:* Run audio through a lightweight bandpass filter and Silero VAD (Voice Activity Detector) to strip silence and high-frequency street noise. Route audio to **Sarvam AI Saaras** model, fine-tuned specifically for Indian accented Hinglish and local retail slang.
-* **Challenge 3: Keeping System 1 (Jev) Under 25ms on Cheap Hardware**
-  * *Problem:* Evaluating machine learning models on cloud servers can easily introduce 200ms–500ms of latency if models are unoptimized or run on Python runtimes without compilation.
-  * *Solution:* Export the model to **ONNX INT8 format** and run on **ONNX Runtime with OpenVINO / CPU execution provider**. Pre-allocate tensor memory buffers at server boot; eliminates runtime garbage collection pauses.
+* **Challenge 1: Resolving Ambiguous Colloquial Item Names ("Atta", "Tel", "Surf")**
+  * *Problem:* A merchant texts *"25 bag atta sold at 450"*, but the shop stocks 4 brands and sizes of Atta (Aashirvaad 10kg, Fortune 5kg, Loose Chakki 25kg). Wrongly guessing the SKU corrupts FIFO stock.
+  * *Solution:* Combined price-bracket heuristic + `pgvector` semantic ranking:
+    $$\text{Candidate Score} = \text{CosineSimilarity}(\text{Query}, \text{SKU}) \times \left( 1 - \frac{|\text{Expected MRP} - \text{Sold Price}|}{\text{Expected MRP}} \right)$$
+    At ₹450, 10kg Aashirvaad (MRP ₹460) ranks highest. If confidence is borderline (<80%), Telegram bot returns 1-tap inline buttons in <300ms: *"Did you sell Aashirvaad 10kg or Fortune 10kg?"*.
+* **Challenge 2: Counter Rush-Hour Queue Pressure (6:00 PM – 10:00 PM)**
+  * *Problem:* At peak rush, a merchant cannot wait 5 seconds for an LLM to respond, nor can synchronous DB locks stall concurrent entries.
+  * *Solution:* Sales inputs from Telegram and the Dashboard are acknowledged in `<100ms` and dispatched to **Redis Streams**. Agent 4 consumes events in serialized worker threads with micro-batched DB transactions. The POS Dashboard optimistic UI updates the counter display instantly.
+* **Challenge 3: Noisy Counter Audio & Vernacular Accents**
+  * *Problem:* Ambient Kirana audio contains street traffic, blaring horns, and mixed regional dialects (*"Sharma ji ka paanch sau khate me chadha do"*).
+  * *Solution:* Lightweight bandpass audio filter + Silero VAD to strip street noise and pauses, followed by Indian vernacular STT (Sarvam AI Saaras) and deterministic regex extraction for numerical amounts and standard retail keywords.
+* **Challenge 4: Keeping System 1 (Jev) Under 20ms on Cheap Hardware**
+  * *Problem:* Evaluating machine learning models on cloud servers can introduce 200ms–500ms latency if models are unoptimized or run on Python runtimes without compilation.
+  * *Solution:* Export the classification model to **ONNX INT8 format** and run on **ONNX Runtime with OpenVINO / CPU execution provider**. Pre-allocate tensor memory buffers at server boot to eliminate garbage collection pauses.
 
 ---
 
 ### 5. Phase-Gate Acceptance Criteria (Gate 2)
-* [ ] Soundbox payment ACK latency $<250\text{ms}$ at 500 requests/second sustained load.
-* [ ] Voice note to Khata ledger entry end-to-end turnaround $<1.2\text{ seconds}$.
+* [ ] Telegram text/voice sale event parsed, SKU-resolved, and committed to ledger in $<1.2\text{ seconds}$.
+* [ ] POS Dashboard 1-tap checkout round-trip latency $<150\text{ms}$.
+* [ ] $\ge 95\%$ semantic SKU match accuracy on colloquial product queries using `pgvector` + price-bracket heuristics.
 * [ ] Jev spam/meme rejection latency $<20\text{ms}$ with $\ge 98\%$ precision on memes and non-business forwards.
 * [ ] Zero negative stock and zero database deadlocks across 1,000 simulated concurrent FIFO depletion transactions.
 
@@ -348,15 +375,7 @@
 | Phase | Milestone Name | Key Deliverables | Core Technology | Primary Gate Metric |
 | :---: | :--- | :--- | :--- | :--- |
 | **Phase 1** | **Outflow & Price-Shield MVP** | Paper bill OCR, due dates, margin defense alerts | FastAPI, Gemini 1.5 Flash, PostgreSQL 16 RLS | $\ge 95\%$ bill accuracy, $<15\text{s}$ turnaround |
-| **Phase 2** | **Inflow Rails & Voice Khata** | Soundbox MQTT, Voice Khata, Jev spam filter, FIFO | EMQX, Jev (ONNX CPU), Sarvam STT, Redis Streams | Soundbox ACK $<250\text{ms}$, Jev drop $<20\text{ms}$ |
-| **Phase 3** | **Predictive Cash-Flow Engine** | 30d cash curve, What-If simulator, trade-off matrix | NumPy, LangGraph, Pydantic Tools, Celery Beat | Shortfall accuracy $\ge 92\%$, Simulation $<1.5\text{s}$ |
-| **Phase 4** | **Launch, Audio & Statutory WORM** | Soundbox audio storyteller, WORM log, Paytm credit | Edge MQTT Audio, SHA-256 SQL Triggers, OTel | Audio start $<500\text{ms}$, 99.95% uptime |
-
----
-
-> **Governance Protocol:**  
-> Zero code leaks across boundaries. No Phase 2 code is merged until Phase 1 passes all automated acceptance tests and receives formal stakeholder sign-off.
-ox MQTT, Voice Khata, Jev spam filter, FIFO | EMQX, Jev (ONNX CPU), Sarvam STT, Redis Streams | Soundbox ACK $<250\text{ms}$, Jev drop $<20\text{ms}$ |
+| **Phase 2** | **Itemized Sales & Dashboard** | Telegram sales, POS dashboard, pgvector SKU match, FIFO | Telegram Bot, FastAPI PWA, pgvector, Redis Streams | Sale commit $<1.2\text{s}$, Jev drop $<20\text{ms}$ |
 | **Phase 3** | **Predictive Cash-Flow Engine** | 30d cash curve, What-If simulator, trade-off matrix | NumPy, LangGraph, Pydantic Tools, Celery Beat | Shortfall accuracy $\ge 92\%$, Simulation $<1.5\text{s}$ |
 | **Phase 4** | **Launch, Audio & Statutory WORM** | Soundbox audio storyteller, WORM log, Paytm credit | Edge MQTT Audio, SHA-256 SQL Triggers, OTel | Audio start $<500\text{ms}$, 99.95% uptime |
 
