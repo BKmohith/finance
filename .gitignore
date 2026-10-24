@@ -2,9 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.class
 *.so
 .Python
 env/
+venv/
+.venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -21,16 +25,12 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-.venv/
-venv/
-ENV/
-
-# Environment Variables
+# Environment Variables & Secrets
 .env
 .env.local
 
-# Testing
+# Logs & Testing
+*.log
 .pytest_cache/
 .coverage
 htmlcov/

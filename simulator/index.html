@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak (सहायक) — WhatsApp Gateway & Price-Shield Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #00d26a;
+      --primary-glow: rgba(0, 210, 106, 0.25);
+      --accent: #38bdf8;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(circle at 20% 10%, #101c38 0%, var(--bg) 70%);
+      color: var(--text);
+      font-family: 'Outfit', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto 28px auto;
+      width: 100%;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge {
+      background: rgba(0, 210, 106, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(0, 210, 106, 0.3);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    input, select, textarea {
+      background: rgba(10, 14, 23, 0.7);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 10px 14px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .drop-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .drop-zone:hover {
+      border-color: var(--primary);
+      background: rgba(0, 210, 106, 0.04);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+      box-shadow: none;
+    }
+
+    .phone-mockup {
+      background: #0b141a;
+      border: 2px solid #233138;
+      border-radius: 20px;
+      padding: 16px;
+      height: 480px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .phone-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #202c33;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #25d366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #0b141a;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 4px;
+    }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      max-width: 85%;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .bubble.inbound {
+      background: #202c33;
+      align-self: flex-start;
+      border-bottom-left-radius: 2px;
+    }
+
+    .bubble.outbound {
+      background: #005c4b;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+
+    .console-box {
+      background: #000;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h2>Sahayak (सहायक)</h2>
+      <span class="badge">Laptop 1: Gateway</span>
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-muted);">
+      Meta HMAC Verified &bull; Redis 7.2 &bull; Celery Ready
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- Left Column: Inbound Webhook Simulator -->
+    <div class="card">
+      <div class="card-title">
+        <span>📸 1. Inbound WhatsApp Bill Upload</span>
+        <span id="dedup-badge" class="badge" style="display:none;"></span>
+      </div>
+
+      <div class="form-group">
+        <label>Merchant ID</label>
+        <input type="text" id="merchantId" value="M_9876543210">
+      </div>
+
+      <div class="form-group">
+        <label>Merchant WhatsApp Number</label>
+        <input type="text" id="senderPhone" value="+919876543210">
+      </div>
+
+      <div class="form-group">
+        <label>Sample Indian Wholesale Invoices</label>
+        <select id="billTemplate">
+          <option value="fortune_oil">Fortune Sunflower Oil 1L (Spiked from ₹140 to ₹147)</option>
+          <option value="aashirvaad_atta">Aashirvaad Shudh Chakki Atta 10kg (Stable ₹360)</option>
+          <option value="surf_excel">Surf Excel Easy Wash 1kg (Spiked from ₹115 to ₹128)</option>
+        </select>
+      </div>
+
+      <div class="drop-zone" onclick="triggerUpload()">
+        <p>📄 Click to simulate bill capture & upload</p>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Computes SHA-256 Perceptual Hash</p>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" style="flex:1;" onclick="sendWebhook()">
+          🚀 Fire Inbound Webhook
+        </button>
+        <button class="btn btn-secondary" onclick="simulateDuplicate()">
+          🔁 Test Duplicate Drop (&lt;1ms)
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label>Gateway Execution Log</label>
+        <div class="console-box" id="consoleLog">// Ready to ingest WhatsApp webhooks...</div>
+      </div>
+    </div>
+
+    <!-- Right Column: WhatsApp Mobile Chat Simulator -->
+    <div class="card">
+      <div class="card-title">
+        <span>📱 2. WhatsApp Merchant Terminal</span>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="testPriceShieldAlert()">
+          ⚡ Fire Price-Shield Alert
+        </button>
+      </div>
+
+      <div class="phone-mockup">
+        <div class="phone-header">
+          <div class="avatar">स</div>
+          <div>
+            <div style="font-weight: 600; font-size: 0.95rem;">Paytm Sahayak (सहायक)</div>
+            <div style="font-size: 0.72rem; color: #8696a0;">Official WhatsApp Business Bot</div>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat">
+          <div class="bubble inbound">
+            Namaste! Send a photo of your wholesale supplier bill to digitize prices & protect margins.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let lastSentHash = null;
+
+    function log(msg) {
+      const box = document.getElementById('consoleLog');
+      const time = new Date().toLocaleTimeString();
+      box.textContent += `\n[${time}] ${msg}`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function addMessage(text, type = 'inbound') {
+      const chat = document.getElementById('chat');
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${type}`;
+      bubble.innerText = text;
+      chat.appendChild(bubble);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function triggerUpload() {
+      const template = document.getElementById('billTemplate').value;
+      log(`Selected template: ${template}`);
+    }
+
+    async function sendWebhook(forcedHash = null) {
+      const merchantId = document.getElementById('merchantId').value;
+      const senderPhone = document.getElementById('senderPhone').value;
+      const template = document.getElementById('billTemplate').value;
+      
+      const mediaHash = forcedHash || `hash_${template}_${Math.floor(Math.random() * 100000)}`;
+      lastSentHash = mediaHash;
+
+      const payload = {
+        merchant_id: merchantId,
+        sender_phone: senderPhone,
+        whatsapp_message_id: "wam_" + Date.now(),
+        media: {
+          media_id: "med_" + template,
+          mime_type: "image/jpeg",
+          sha256: mediaHash,
+          file_size: 245000
+        },
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      addMessage(`📷 [Uploaded Bill Photo: ${template}]`, 'outbound');
+      log(`POST /webhook/whatsapp (SHA-256: ${mediaHash.substring(0, 16)}...)`);
+
+      try {
+        const resp = await fetch('/webhook/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        if (data.status === 'DUPLICATE_DROPPED') {
+          log(`⚠️ DUPLICATE DROPPED in ${data.latency_ms}ms! (Key: ${data.cache_key})`);
+          addMessage(`⚠️ Note: You already sent this bill. Duplicate ignored.`, 'inbound');
+        } else if (data.status === 'QUEUED') {
+          log(`✅ QUEUED in ${data.latency_ms}ms -> Task: ${data.task}`);
+          addMessage(`Bill received! Deciphering FMCG rates via Gemini 1.5 Flash...`, 'inbound');
+        }
+      } catch (err) {
+        log(`Error: ${err.message}`);
+      }
+    }
+
+    async function simulateDuplicate() {
+      if (!lastSentHash) {
+        await sendWebhook();
+      }
+      log(`Simulating immediate duplicate upload with SHA-256: ${lastSentHash}...`);
+      await sendWebhook(lastSentHash);
+    }
+
+    async function testPriceShieldAlert() {
+      const alertPayload = {
+        merchant_id: document.getElementById('merchantId').value,
+        merchant_phone: document.getElementById('senderPhone').value,
+        item_name: "Fortune Sunflower Oil 1L",
+        old_wholesale_rate: 140.0,
+        new_wholesale_rate: 147.0,
+        percentage_hike: 5.0,
+        previous_mrp: 155.0,
+        suggested_new_mrp: 165.0,
+        estimated_loss_if_unchanged: 420.0
+      };
+
+      log(`POST /api/alerts/price-shield for ${alertPayload.item_name}...`);
+
+      try {
+        const resp = await fetch('/api/alerts/price-shield', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alertPayload)
+        });
+        const data = await resp.json();
+        log(`Alert dispatched: ${data.dispatch_result.status}`);
+
+        const alertText = 
+`⚠️ *Sahayak Price-Shield Alert* ⚠️
+Wholesale cost for *${alertPayload.item_name}* rose from ₹${alertPayload.old_wholesale_rate} to ₹${alertPayload.new_wholesale_rate} (+${alertPayload.percentage_hike}%).
+
+📉 Projected Profit Loss: ₹${alertPayload.estimated_loss_if_unchanged}/mo
+🏷️ Previous MRP: ₹${alertPayload.previous_mrp}
+🛡️ *Suggested Shelf MRP:* ₹${alertPayload.suggested_new_mrp} (Protects 10-12% gross margin)`;
+
+        addMessage(alertText, 'inbound');
+      } catch (err) {
+        log(`Error sending alert: ${err.message}`);
+      }
+    }
+  </script>
+</body>
+</html>
