@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak (सहायक) — Kirana Touch Counter POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070b14;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #00d26a;
+      --primary-glow: rgba(0, 210, 106, 0.25);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(circle at 10% 10%, #0d1b38 0%, var(--bg) 80%);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1300px;
+      margin: 0 auto 20px auto;
+      width: 100%;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge {
+      background: rgba(0, 210, 106, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(0, 210, 106, 0.3);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-left: 16px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+
+    .pos-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    @media (max-width: 980px) {
+      .pos-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Denomination Presets */
+    .quick-cash-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .quick-cash-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 12px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .quick-cash-btn span { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
+    .quick-cash-btn:hover { background: rgba(0, 210, 106, 0.12); border-color: var(--primary); transform: translateY(-1px); }
+
+    /* Payment Methods */
+    .pm-toggle-group {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: rgba(10, 14, 23, 0.6);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .pm-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .pm-btn.active {
+      background: var(--primary);
+      color: #070b14;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Catalog Item Grid */
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .catalog-item-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 90px;
+    }
+
+    .catalog-item-card:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.06);
+      transform: translateY(-2px);
+    }
+
+    .item-name { font-size: 0.8rem; font-weight: 600; line-height: 1.2; }
+    .item-price { font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-top: auto; }
+
+    /* Basket Items List */
+    .basket-list {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+
+    .basket-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10, 14, 23, 0.5);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qty-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text);
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .qty-btn:hover { background: var(--primary); color: #000; }
+
+    /* Total and Action Buttons */
+    .total-box {
+      background: rgba(0, 210, 106, 0.06);
+      border: 1px solid rgba(0, 210, 106, 0.2);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .total-label { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+    .total-val { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+
+    .btn-complete {
+      background: var(--primary);
+      color: #070b14;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-complete:hover {
+      box-shadow: 0 6px 24px var(--primary-glow);
+      transform: translateY(-2px);
+    }
+
+    .form-input {
+      background: rgba(10, 14, 23, 0.7);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.88rem;
+      padding: 8px 12px;
+      border-radius: 8px;
+      width: 100%;
+    }
+    .form-input:focus { outline: none; border-color: var(--accent); }
+
+    .console-box {
+      background: #000;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #38bdf8;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h2>Sahayak (सहायक)</h2>
+      <span class="badge">Phase 2: Touch Counter POS</span>
+    </div>
+    <div class="nav-links">
+      <a href="/simulator">📸 Bill OCR Simulator</a>
+      <a href="/docs" target="_blank">📖 Swagger API Docs</a>
+    </div>
+  </header>
+
+  <main class="pos-grid">
+    <!-- LEFT: Fast Item Selection & Payment Mode -->
+    <div class="card">
+      <div class="card-title">
+        <span>⚡ 1. Rapid Counter Touch Inflow</span>
+        <span style="font-size:0.75rem; font-weight:500; color:var(--text-muted);" id="latencyIndicator">&lt;40ms Fast Attribution</span>
+      </div>
+
+      <!-- Quick Denomination Buttons -->
+      <div class="quick-cash-row">
+        <button class="quick-cash-btn" onclick="setQuickAmount(50)">₹50<span>Quick</span></button>
+        <button class="quick-cash-btn" onclick="setQuickAmount(100)">₹100<span>Quick</span></button>
+        <button class="quick-cash-btn" onclick="setQuickAmount(200)">₹200<span>Quick</span></button>
+        <button class="quick-cash-btn" onclick="setQuickAmount(500)">₹500<span>Quick</span></button>
+      </div>
+
+      <!-- Payment Mode Selector -->
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px; display:block;">Select Payment Rail</label>
+        <div class="pm-toggle-group">
+          <button class="pm-btn active" id="btn-upi" onclick="selectPaymentMethod('PAYTM_UPI')">📲 Paytm UPI</button>
+          <button class="pm-btn" id="btn-cash" onclick="selectPaymentMethod('CASH')">💵 Cash</button>
+          <button class="pm-btn" id="btn-khata" onclick="selectPaymentMethod('KHATA_CREDIT')">📝 Khata (Udhaar)</button>
+          <button class="pm-btn" id="btn-split" onclick="selectPaymentMethod('SPLIT')">⚖️ Split</button>
+        </div>
+      </div>
+
+      <!-- Fast FMCG Catalog Selector -->
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px; display:block;">Tap FMCG SKU to Add to Basket</label>
+        <div class="catalog-grid" id="catalogGrid">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Console Log -->
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px; display:block;">Gateway Transaction Log</label>
+        <div class="console-box" id="consoleLog">// POS terminal ready...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Active Basket & Checkout -->
+    <div class="card">
+      <div class="card-title">
+        <span>🛒 Active Basket</span>
+        <button style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:0.8rem;" onclick="clearBasket()">Clear</button>
+      </div>
+
+      <div class="basket-list" id="basketList">
+        <div style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:30px 0;">
+          Basket is empty. Tap items on left or quick denomination.
+        </div>
+      </div>
+
+      <!-- Customer Details for Khata / Udhaar -->
+      <div id="customerSection" style="display:none; background:rgba(245, 158, 11, 0.06); border:1px solid rgba(245, 158, 11, 0.2); padding:10px; border-radius:10px;">
+        <div style="font-size:0.8rem; color:var(--warning); font-weight:600; margin-bottom:6px;">👤 Customer Credit (Udhaar) Attribution:</div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" class="form-input" id="custName" placeholder="Customer Name (e.g. Sharma ji)">
+          <input type="text" class="form-input" id="custPhone" placeholder="Mobile / Telegram ID">
+        </div>
+      </div>
+
+      <!-- Split Payment Breakdown (Shown when SPLIT is selected) -->
+      <div id="splitSection" style="display:none; display:flex; gap:8px;">
+        <div style="flex:1;">
+          <label style="font-size:0.75rem; color:var(--text-muted);">Paid Amount (₹)</label>
+          <input type="number" class="form-input" id="splitPaid" value="0" oninput="calcTotals()">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:0.75rem; color:var(--text-muted);">Udhaar / Credit (₹)</label>
+          <input type="number" class="form-input" id="splitCredit" value="0" oninput="calcTotals()">
+        </div>
+      </div>
+
+      <!-- Total Box -->
+      <div class="total-box">
+        <div>
+          <div class="total-label">Total Sale Value</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);" id="itemCountLabel">0 items selected</div>
+        </div>
+        <div class="total-val" id="totalDisplay">₹0.00</div>
+      </div>
+
+      <!-- Complete Sale Action -->
+      <button class="btn-complete" onclick="submitCounterSale()">
+        <span>⚡ Complete Sale & Deplete Stock</span>
+      </button>
+    </div>
+  </main>
+
+  <script>
+    let activePaymentMethod = 'PAYTM_UPI';
+    let basket = [];
+
+    const CATALOG = [
+      { item_name: "Fortune Sunflower Oil 1L", unit_retail_price: 165.0, unit: "litres" },
+      { item_name: "Aashirvaad Atta 10kg", unit_retail_price: 360.0, unit: "bags" },
+      { item_name: "Surf Excel Easy Wash 1kg", unit_retail_price: 135.0, unit: "units" },
+      { item_name: "Tata Salt 1kg", unit_retail_price: 28.0, unit: "units" },
+      { item_name: "Maggi 2-Min Noodles 70g", unit_retail_price: 14.0, unit: "units" },
+      { item_name: "Amul Butter 500g", unit_retail_price: 275.0, unit: "units" },
+      { item_name: "Parle-G Gold 250g", unit_retail_price: 25.0, unit: "units" }
+    ];
+
+    function log(msg) {
+      const box = document.getElementById('consoleLog');
+      const time = new Date().toLocaleTimeString();
+      box.textContent += `\n[${time}] ${msg}`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function initCatalog() {
+      const grid = document.getElementById('catalogGrid');
+      grid.innerHTML = CATALOG.map((item, idx) => `
+        <div class="catalog-item-card" onclick="addToBasket(${idx})">
+          <div class="item-name">${item.item_name}</div>
+          <div class="item-price">₹${item.unit_retail_price}</div>
+        </div>
+      `).join('');
+    }
+
+    function addToBasket(idx) {
+      const item = CATALOG[idx];
+      const existing = basket.find(b => b.item_name === item.item_name);
+      if (existing) {
+        existing.quantity += 1;
+        existing.line_total = existing.quantity * existing.unit_retail_price;
+      } else {
+        basket.push({
+          item_name: item.item_name,
+          quantity: 1,
+          unit: item.unit,
+          unit_retail_price: item.unit_retail_price,
+          line_total: item.unit_retail_price
+        });
+      }
+      renderBasket();
+      log(`Added: ${item.item_name} (₹${item.unit_retail_price})`);
+    }
+
+    function setQuickAmount(amt) {
+      basket = [{
+        item_name: `Quick Sale (₹${amt})`,
+        quantity: 1,
+        unit: "units",
+        unit_retail_price: amt,
+        line_total: amt
+      }];
+      renderBasket();
+      log(`Quick denomination selected: ₹${amt}`);
+    }
+
+    function updateQty(idx, delta) {
+      basket[idx].quantity += delta;
+      if (basket[idx].quantity <= 0) {
+        basket.splice(idx, 1);
+      } else {
+        basket[idx].line_total = basket[idx].quantity * basket[idx].unit_retail_price;
+      }
+      renderBasket();
+    }
+
+    function clearBasket() {
+      basket = [];
+      renderBasket();
+      log("Basket cleared.");
+    }
+
+    function selectPaymentMethod(pm) {
+      activePaymentMethod = pm;
+      document.querySelectorAll('.pm-btn').forEach(b => b.classList.remove('active'));
+
+      if (pm === 'PAYTM_UPI') document.getElementById('btn-upi').classList.add('active');
+      if (pm === 'CASH') document.getElementById('btn-cash').classList.add('active');
+      if (pm === 'KHATA_CREDIT') document.getElementById('btn-khata').classList.add('active');
+      if (pm === 'SPLIT') document.getElementById('btn-split').classList.add('active');
+
+      document.getElementById('customerSection').style.display = (pm === 'KHATA_CREDIT' || pm === 'SPLIT') ? 'block' : 'none';
+      document.getElementById('splitSection').style.display = (pm === 'SPLIT') ? 'flex' : 'none';
+
+      calcTotals();
+      log(`Payment rail switched to: ${pm}`);
+    }
+
+    function renderBasket() {
+      const list = document.getElementById('basketList');
+      if (basket.length === 0) {
+        list.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:30px 0;">Basket is empty. Tap items on left.</div>`;
+      } else {
+        list.innerHTML = basket.map((item, idx) => `
+          <div class="basket-row">
+            <div>
+              <div style="font-weight:600;">${item.item_name}</div>
+              <div style="color:var(--text-muted); font-size:0.75rem;">₹${item.unit_retail_price} each</div>
+            </div>
+            <div class="qty-controls">
+              <button class="qty-btn" onclick="updateQty(${idx}, -1)">-</button>
+              <span style="font-weight:700;">${item.quantity}</span>
+              <button class="qty-btn" onclick="updateQty(${idx}, 1)">+</button>
+              <span style="font-weight:700; color:var(--accent); min-width:60px; text-align:right;">₹${item.line_total.toFixed(2)}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+      calcTotals();
+    }
+
+    function calcTotals() {
+      const total = basket.reduce((acc, curr) => acc + curr.line_total, 0);
+      document.getElementById('totalDisplay').innerText = `₹${total.toFixed(2)}`;
+      document.getElementById('itemCountLabel').innerText = `${basket.length} item(s) selected`;
+
+      if (activePaymentMethod === 'SPLIT') {
+        const splitPaid = parseFloat(document.getElementById('splitPaid').value) || 0;
+        const remainingCredit = Math.max(0, total - splitPaid);
+        document.getElementById('splitCredit').value = remainingCredit.toFixed(2);
+      }
+    }
+
+    async function submitCounterSale() {
+      const total = basket.reduce((acc, curr) => acc + curr.line_total, 0);
+      if (total <= 0) {
+        alert("Please select at least one item or quick amount.");
+        return;
+      }
+
+      let amountPaid = total;
+      let creditAmount = 0.0;
+
+      if (activePaymentMethod === 'KHATA_CREDIT') {
+        amountPaid = 0.0;
+        creditAmount = total;
+      } else if (activePaymentMethod === 'SPLIT') {
+        amountPaid = parseFloat(document.getElementById('splitPaid').value) || 0;
+        creditAmount = parseFloat(document.getElementById('splitCredit').value) || (total - amountPaid);
+      }
+
+      const custName = document.getElementById('custName').value.trim();
+      const custPhone = document.getElementById('custPhone').value.trim();
+
+      if (creditAmount > 0 && !custName && !custPhone) {
+        alert("Please enter customer name or phone for Udhaar (credit) attribution.");
+        return;
+      }
+
+      const payload = {
+        merchant_id: "M_9876543210",
+        amount_paid: amountPaid,
+        payment_method: activePaymentMethod,
+        payment_reference: activePaymentMethod === 'PAYTM_UPI' ? "UPI_" + Date.now() : null,
+        items: basket,
+        customer_name: custName || null,
+        customer_phone: custPhone || null,
+        credit_amount: creditAmount,
+        timestamp: new Date().toISOString()
+      };
+
+      log(`POST /api/counter/sale (Total: ₹${total.toFixed(2)}, Paid: ₹${amountPaid}, Credit: ₹${creditAmount})...`);
+
+      try {
+        const res = await fetch('/api/counter/sale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          log(`✅ Sale ${data.sale_id} logged in ${data.latency_ms}ms!`);
+          log(`🚀 FIFO inventory depletion queued for background batch workers.`);
+          if (data.receipt_dispatched !== 'none') {
+            log(`📲 Customer digital Khata receipt sent!`);
+          }
+          alert(`Sale Completed!\nID: ${data.sale_id}\nLatency: ${data.latency_ms}ms\nFIFO Depletion Queued.`);
+          clearBasket();
+          document.getElementById('custName').value = '';
+          document.getElementById('custPhone').value = '';
+        } else {
+          log(`❌ Error: ${data.detail || JSON.stringify(data)}`);
+          alert(`Error: ${data.detail || 'Could not complete sale'}`);
+        }
+      } catch (err) {
+        log(`Network Error: ${err.message}`);
+      }
+    }
+
+    initCatalog();
+  </script>
+</body>
+</html>

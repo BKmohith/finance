@@ -236,6 +236,13 @@ app.add_middleware(
 # Register API routes
 app.include_router(api_router)
 
+# Pluggable Phase 2 Counter Router (Zero-Conflict Protocol)
+try:
+    from app.api.counter import counter_router
+    app.include_router(counter_router)
+except ImportError:
+    pass
+
 # Mount simulator directory if exists
 SIMULATOR_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "simulator")
 if os.path.exists(SIMULATOR_DIR):
@@ -243,6 +250,12 @@ if os.path.exists(SIMULATOR_DIR):
     async def serve_simulator():
         index_path = os.path.join(SIMULATOR_DIR, "index.html")
         return FileResponse(index_path)
+
+    @app.get("/counter", tags=["Simulator"], response_class=FileResponse)
+    async def serve_counter_pos():
+        counter_path = os.path.join(SIMULATOR_DIR, "counter.html")
+        return FileResponse(counter_path)
+
 
 
 if __name__ == "__main__":
