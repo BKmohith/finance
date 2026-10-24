@@ -14,6 +14,22 @@ from app.db.models import (
 )
 
 
+def get_or_create_merchant(session: Session, merchant_id: str, name: str = "Sahayak Retail Merchant", phone: Optional[str] = None) -> Merchant:
+    stmt = select(Merchant).where(Merchant.id == merchant_id)
+    merchant = session.execute(stmt).scalars().first()
+    if not merchant:
+        import uuid
+        phone_num = phone or f"+91{uuid.uuid4().int % 10000000000:010d}"
+        merchant = Merchant(
+            id=merchant_id,
+            name=name,
+            phone=phone_num
+        )
+        session.add(merchant)
+        session.flush()
+    return merchant
+
+
 def get_or_create_supplier(session: Session, merchant_id: str, supplier_name: str, supplier_gstin: Optional[str] = None) -> Supplier:
     """
     Looks up an existing supplier for this merchant by name, or creates a new one.
@@ -48,6 +64,9 @@ def save_extracted_invoice(session: Session, merchant_id: str, data: ExtractedIn
     4. Appends to PriceHistory for margin tracking
     5. Writes cryptographic audit log entry
     """
+    # 0. Ensure Merchant exists
+    get_or_create_merchant(session=session, merchant_id=merchant_id)
+
     # 1. Supplier
     supplier = get_or_create_supplier(
         session=session,

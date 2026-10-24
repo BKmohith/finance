@@ -303,3 +303,87 @@ def parse_inbound_event(payload: Dict[str, Any]) -> Optional[InboundInvoiceEvent
     except Exception as e:
         logger.debug(f"Failed to parse payload: {e}")
         return None
+
+
+# ============================================================================
+# 4. Interactive Simulator Direct Ingestion (Full Pipeline)
+# ============================================================================
+from pydantic import BaseModel
+import base64
+from pathlib import Path
+
+class SimulatorProcessRequest(BaseModel):
+    merchant_id: str = "M_DEMO_KIRANA"
+    sender_phone: str = "+919876543210"
+    bill_filename: str = "sample_bill_SBT_2026_081.jpg"
+    image_base64: Optional[str] = None
+    hike_simulation: bool = False
+
+@router.post("/api/simulator/process-bill", tags=["Simulator"])
+async def simulator_process_bill(req: SimulatorProcessRequest):
+    """
+    Executes the entire end-to-end pipeline:
+    1. OpenCV Image Deskew & Contrast Enhancement
+    2. Gemini Flash Structured Vision OCR
+    3. Arithmetic Guardrail Validation
+    4. Supabase PostgreSQL ACID Ledger write with Row-Level Security
+    5. Margin-Guard wholesale price deviation evaluation & suggested retail MRP
+    """
+    start_time = time.perf_counter()
+    from app.workers.preprocessor import preprocess_bill_image
+    from app.workers.gemini_extractor import extract_invoice_from_image
+    from app.workers.guardrails import validate_invoice_arithmetic
+    from app.db.session import get_rls_session
+    from app.db import repository, margin_guard
+
+    # 1. Fetch image bytes
+    if req.image_base64:
+        raw_b64 = req.image_base64.split(",")[-1]
+        img_bytes = base64.b64decode(raw_b64)
+    else:
+        fixtures_dir = Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures" / "bills"
+        target_path = fixtures_dir / req.bill_filename
+        if not target_path.exists():
+            target_path = fixtures_dir / "sample_bill_SBT_2026_081.jpg"
+        img_bytes = target_path.read_bytes()
+
+    # 2. OpenCV Preprocess
+    clean_bytes = preprocess_bill_image(img_bytes)
+
+    # 3. Gemini Vision OCR
+    extracted_data = extract_invoice_from_image(clean_bytes)
+
+    # Optional simulation of a wholesale hike for demo comparison
+    if req.hike_simulation and extracted_data.items:
+        # Increase first item by 5.5%
+        first_item = extracted_data.items[0]
+        first_item.unit_wholesale_rate = round(first_item.unit_wholesale_rate * 1.055, 2)
+        first_item.line_total = round(first_item.unit_wholesale_rate * first_item.quantity, 2)
+        extracted_data.grand_total = sum(i.line_total for i in extracted_data.items)
+
+    # 4. Arithmetic Guardrails
+    validated_data, guardrail_summary = validate_invoice_arithmetic(extracted_data, raise_on_failure=True)
+
+    # 5. Supabase Transactional Write with RLS
+    with get_rls_session(req.merchant_id) as session:
+        inv = repository.save_extracted_invoice(session, req.merchant_id, validated_data)
+        invoice_id = str(inv.id)
+        # 6. Margin-Guard Evaluation
+        alerts = margin_guard.evaluate_price_deviations(session, req.merchant_id, inv.id)
+        session.commit()
+
+    total_latency_ms = (time.perf_counter() - start_time) * 1000
+
+    return {
+        "status": "SUCCESS",
+        "merchant_id": req.merchant_id,
+        "invoice_id": invoice_id,
+        "invoice_number": validated_data.invoice_number,
+        "supplier_name": validated_data.supplier_name,
+        "supplier_gstin": validated_data.supplier_gstin,
+        "grand_total": validated_data.grand_total,
+        "confidence_score": validated_data.confidence_score,
+        "line_items": [i.model_dump() for i in validated_data.items],
+        "margin_alerts": [a.model_dump() for a in alerts],
+        "latency_ms": round(total_latency_ms, 2)
+    }

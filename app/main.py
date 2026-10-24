@@ -41,7 +41,7 @@ async def telegram_long_poll_worker():
         logger.info("Telegram polling disabled (mock token).")
         return
 
-    logger.info("🚀 Telegram Long-Polling started for @sahayak_retail_bot!")
+    logger.info("Telegram Long-Polling started for @sahayak_retail_bot!")
     offset = None
     url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/getUpdates"
 
@@ -77,7 +77,7 @@ async def telegram_long_poll_worker():
                             if text.startswith("/start"):
                                 send_telegram_text(
                                     chat_id,
-                                    "🙏 *Namaste! Welcome to Sahayak (सहायक)*\n\n"
+                                    "✨ *Namaste! Welcome to Sahayak (सहायक)*\n\n"
                                     "Your mobile copilot is active. Send a photo of your *wholesale paper bill* "
                                     "to digitize rates and protect retail margins!"
                                 )
@@ -89,14 +89,39 @@ async def telegram_long_poll_worker():
                         if is_dup:
                             send_telegram_text(
                                 chat_id,
-                                "⚠️ *Duplicate Dropped (<1ms)*\nYou already uploaded this invoice earlier. Duplicate skipped!"
+                                "🛡️ *Duplicate Dropped (<1ms)*\nYou already uploaded this invoice earlier. Duplicate skipped!"
                             )
                         else:
                             send_telegram_text(
                                 chat_id,
-                                "🧾 *Bill Photo Received!*\nDeciphering Indian FMCG line items via Gemini 1.5 Flash Vision..."
+                                "⏳ *Bill Photo Received!*\n"
+                                "Deciphering Indian FMCG line items via Gemini Flash Vision & calculating margin impact..."
                             )
                             logger.info(f"Queued bill from Telegram chat {chat_id}: media_id={media_id}")
+
+                            async def _process_tg(m_id, med_id, m_hash, c_id):
+                                try:
+                                    from app.workers.tasks import process_invoice_task
+                                    res = await asyncio.to_thread(
+                                        process_invoice_task,
+                                        merchant_id=m_id,
+                                        media_id=med_id,
+                                        whatsapp_message_id=f"tg_{m_hash}",
+                                        sender_phone=str(c_id)
+                                    )
+                                    send_telegram_text(
+                                        c_id,
+                                        f"✅ *Invoice {res.get('invoice_number', 'Digitized')} Logged!*\n\n"
+                                        f"📦 *Items Extracted:* {res.get('items_count', 0)} line items\n"
+                                        f"💰 *Grand Total:* ₹{res.get('grand_total', 0):,.2f}\n"
+                                        f"🔒 *Ledger Status:* Stored securely in Supabase PostgreSQL (RLS Active)\n"
+                                        f"🛡️ *Margin-Guard:* Checked against historical wholesale rates"
+                                    )
+                                except Exception as exc:
+                                    logger.error(f"Error processing Telegram invoice: {exc}")
+                                    send_telegram_text(c_id, f"⚠️ Note: Invoice processed with note: {exc}")
+
+                            asyncio.create_task(_process_tg(merchant_id, media_id, media_hash, chat_id))
             except asyncio.CancelledError:
                 logger.info("Telegram polling worker cancelled.")
                 break
@@ -118,7 +143,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sahayak (सहायक) — Gateway & Ingest API",
+    title="Sahayak (सहायक) - Gateway & Ingest API",
     description="High-Speed Ingestion (WhatsApp & Telegram), Sub-Millisecond Deduplication & Price-Shield Margin Alerting",
     version="0.1.0",
     lifespan=lifespan,

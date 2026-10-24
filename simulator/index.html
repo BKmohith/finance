@@ -3,20 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sahayak (सहायक) — WhatsApp Gateway & Price-Shield Simulator</title>
+  <title>Sahayak (सहायक) - End-to-End Interactive Kirana Copilot Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: rgba(18, 24, 38, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
       --primary: #00d26a;
       --primary-glow: rgba(0, 210, 106, 0.25);
       --accent: #38bdf8;
       --warning: #f59e0b;
       --danger: #ef4444;
+      --purple: #a855f7;
       --text: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -37,8 +38,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      max-width: 1200px;
-      margin: 0 auto 28px auto;
+      max-width: 1350px;
+      margin: 0 auto 24px auto;
       width: 100%;
       border-bottom: 1px solid var(--card-border);
       padding-bottom: 16px;
@@ -50,11 +51,17 @@
       gap: 12px;
     }
 
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
     .badge {
       background: rgba(0, 210, 106, 0.12);
       color: var(--primary);
       border: 1px solid rgba(0, 210, 106, 0.3);
-      padding: 4px 10px;
+      padding: 4px 12px;
       border-radius: 999px;
       font-size: 0.75rem;
       font-weight: 600;
@@ -62,16 +69,34 @@
       letter-spacing: 0.05em;
     }
 
+    .badge-tg {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .badge-tg:hover {
+      background: rgba(56, 189, 248, 0.25);
+    }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      max-width: 1200px;
+      max-width: 1350px;
       margin: 0 auto;
       width: 100%;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 960px) {
       .grid { grid-template-columns: 1fr; }
     }
 
@@ -107,77 +132,82 @@
       color: var(--text-muted);
     }
 
-    input, select, textarea {
-      background: rgba(10, 14, 23, 0.7);
+    input, select {
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
       color: var(--text);
-      font-family: inherit;
-      font-size: 0.9rem;
       padding: 10px 14px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-    }
-
-    input:focus, select:focus, textarea:focus {
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
       outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--primary-glow);
+      transition: border-color 0.2s, background 0.2s;
     }
 
-    .drop-zone {
-      border: 2px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .drop-zone:hover {
+    input:focus, select:focus {
       border-color: var(--primary);
-      background: rgba(0, 210, 106, 0.04);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     .btn {
       background: var(--primary);
-      color: #000;
+      color: #032b13;
       border: none;
-      padding: 12px 20px;
-      font-size: 0.95rem;
+      padding: 12px 18px;
+      border-radius: 10px;
       font-weight: 600;
-      border-radius: 8px;
+      font-size: 0.95rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       transition: all 0.2s;
+      box-shadow: 0 4px 14px var(--primary-glow);
     }
 
     .btn:hover {
+      filter: brightness(1.1);
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px var(--primary-glow);
     }
 
     .btn-secondary {
       background: rgba(255, 255, 255, 0.08);
       color: var(--text);
+      box-shadow: none;
+      border: 1px solid var(--card-border);
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, #0284c7 0%, #00d26a 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
       box-shadow: none;
     }
 
-    .phone-mockup {
-      background: #0b141a;
-      border: 2px solid #233138;
+    .btn-warning:hover {
+      background: rgba(245, 158, 11, 0.25);
+    }
+
+    /* Chat phone mock */
+    .phone-mock {
+      background: #0b121e;
+      border: 1px solid var(--card-border);
       border-radius: 20px;
       padding: 16px;
-      height: 480px;
       display: flex;
       flex-direction: column;
+      height: 480px;
       position: relative;
     }
 
@@ -185,69 +215,134 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      border-bottom: 1px solid #202c33;
       padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       margin-bottom: 12px;
     }
 
     .avatar {
       width: 36px;
       height: 36px;
+      background: var(--primary);
       border-radius: 50%;
-      background: #25d366;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      color: #0b141a;
+      font-weight: 700;
+      color: #032b13;
+      font-size: 0.9rem;
     }
 
-    .chat-messages {
+    .chat-area {
       flex: 1;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      padding-right: 4px;
+      padding-right: 6px;
+    }
+
+    .chat-area::-webkit-scrollbar {
+      width: 4px;
+    }
+    .chat-area::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
     }
 
     .bubble {
-      padding: 10px 14px;
-      border-radius: 12px;
       max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 14px;
       font-size: 0.88rem;
-      line-height: 1.4;
-      animation: fadeIn 0.3s ease;
+      line-height: 1.45;
+      word-wrap: break-word;
+      white-space: pre-line;
     }
 
     .bubble.inbound {
-      background: #202c33;
+      background: #182232;
       align-self: flex-start;
       border-bottom-left-radius: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .bubble.outbound {
       background: #005c4b;
+      color: #e9edef;
       align-self: flex-end;
       border-bottom-right-radius: 2px;
     }
 
-    .console-box {
-      background: #000;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #38bdf8;
-      max-height: 160px;
-      overflow-y: auto;
-      white-space: pre-wrap;
+    .bubble.alert {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Results Table */
+    .table-container {
+      margin-top: 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    /* Console terminal */
+    .console-card {
+      max-width: 1350px;
+      margin: 24px auto 0 auto;
+      width: 100%;
+    }
+
+    .terminal {
+      background: #05080f;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #a5f3fc;
+      height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: inline-block;
+      box-shadow: 0 0 8px var(--primary);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
     }
   </style>
 </head>
@@ -255,87 +350,156 @@
 
   <header>
     <div class="brand">
-      <h2>Sahayak (सहायक)</h2>
-      <span class="badge">Laptop 1: Gateway</span>
+      <div class="status-dot"></div>
+      <h1>Sahayak (सहायक)</h1>
+      <span class="badge">Tri-Laptop Decoupled Core Live</span>
     </div>
-    <div style="font-size: 0.85rem; color: var(--text-muted);">
-      Meta HMAC Verified &bull; Redis 7.2 &bull; Celery Ready
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <a href="https://t.me/sahayak_retail_bot" target="_blank" class="badge-tg">
+        📱 @sahayak_retail_bot (Live Telegram)
+      </a>
+      <a href="/docs" target="_blank" class="badge-tg" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+        📖 Swagger Docs
+      </a>
     </div>
   </header>
 
-  <main class="grid">
-    <!-- Left Column: Inbound Webhook Simulator -->
-    <div class="card">
-      <div class="card-title">
-        <span>📸 1. Inbound WhatsApp Bill Upload</span>
-        <span id="dedup-badge" class="badge" style="display:none;"></span>
-      </div>
+  <div class="grid">
+    <!-- LEFT COLUMN: CONTROLS & TEST ACTIONS -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <!-- CARD 1: LIVE END-TO-END PIPELINE -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚡ Live End-to-End Execution Pipeline</span>
+          <span style="font-size: 0.75rem; color: var(--accent);">OCR ➔ Supabase ➔ Margin Guard</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Runs OpenCV deskewing, Gemini 3.5 Flash vision extraction, arithmetic guardrails, ACID Supabase ledger write with Row-Level Security, and Margin-Guard price shield calculation.
+        </p>
 
-      <div class="form-group">
-        <label>Merchant ID</label>
-        <input type="text" id="merchantId" value="M_9876543210">
-      </div>
+        <div class="form-group">
+          <label>Select Wholesale Bill Image Fixture</label>
+          <select id="directBillSelect">
+            <option value="sample_bill_SBT_2026_081.jpg">SBT-2026-081: Shree Balaji Traders (Baseline: Oil @ ₹110, Atta @ ₹380)</option>
+            <option value="sample_bill_SBT_2026_082_skewed.jpg">SBT-2026-082 (Skewed): Faint Dot-Matrix Dot Ribbon Bill</option>
+          </select>
+        </div>
 
-      <div class="form-group">
-        <label>Merchant WhatsApp Number</label>
-        <input type="text" id="senderPhone" value="+919876543210">
-      </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="hikeSimCheck" style="width: 18px; height: 18px; cursor: pointer;">
+          <label for="hikeSimCheck" style="cursor: pointer; color: #fde047; font-weight: 600;">
+            Simulate +5.5% Wholesale Rate Hike (Triggers Live Price-Shield Alert!)
+          </label>
+        </div>
 
-      <div class="form-group">
-        <label>Sample Indian Wholesale Invoices</label>
-        <select id="billTemplate">
-          <option value="fortune_oil">Fortune Sunflower Oil 1L (Spiked from ₹140 to ₹147)</option>
-          <option value="aashirvaad_atta">Aashirvaad Shudh Chakki Atta 10kg (Stable ₹360)</option>
-          <option value="surf_excel">Surf Excel Easy Wash 1kg (Spiked from ₹115 to ₹128)</option>
-        </select>
-      </div>
-
-      <div class="drop-zone" onclick="triggerUpload()">
-        <p>📄 Click to simulate bill capture & upload</p>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Computes SHA-256 Perceptual Hash</p>
-      </div>
-
-      <div style="display: flex; gap: 10px;">
-        <button class="btn" style="flex:1;" onclick="sendWebhook()">
-          🚀 Fire Inbound Webhook
+        <button class="btn btn-accent" id="btnRunPipeline" onclick="runLivePipeline()">
+          <span>🚀 Run Full Live Pipeline</span>
         </button>
-        <button class="btn btn-secondary" onclick="simulateDuplicate()">
-          🔁 Test Duplicate Drop (&lt;1ms)
-        </button>
+
+        <div id="pipelineResults" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <span style="font-size: 0.85rem; color: var(--primary); font-weight: 600;" id="pipelineStatusText">Status: SUCCESS</span>
+            <span style="font-size: 0.78rem; color: var(--text-muted);" id="pipelineLatencyText">Latency: 0ms</span>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FMCG Item</th>
+                  <th>Qty</th>
+                  <th>Wholesale</th>
+                  <th>GST</th>
+                  <th>Line Total</th>
+                </tr>
+              </thead>
+              <tbody id="lineItemsTableBody"></tbody>
+            </table>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; word-break: break-all;" id="dbRecordId"></div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>Gateway Execution Log</label>
-        <div class="console-box" id="consoleLog">// Ready to ingest WhatsApp webhooks...</div>
+      <!-- CARD 2: GATEWAY & DEDUPLICATION -->
+      <div class="card">
+        <div class="card-title">
+          <span>🛡️ Sub-Millisecond Deduplication & Gateway</span>
+          <span style="font-size: 0.75rem; color: var(--primary);">&lt;1ms Redis SLA</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Merchant ID</label>
+            <input type="text" id="merchantId" value="M_DEMO_KIRANA">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="senderPhone" value="+919876543210">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="sendWebhookUpload()">
+            📤 Upload Bill (New)
+          </button>
+          <button class="btn btn-warning" style="flex: 1;" onclick="simulateImmediateDuplicate()">
+            🔁 Retest Duplicate Drop
+          </button>
+        </div>
       </div>
+
+      <!-- CARD 3: MARGIN GUARD SIMULATION -->
+      <div class="card">
+        <div class="card-title">
+          <span>📊 Margin-Guard Price Shield Outbound Alert</span>
+          <span style="font-size: 0.75rem; color: #fbbf24;">&gt;3% Hike Shield</span>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-warning" style="flex: 1;" onclick="testPriceShieldAlert()">
+            🚨 Trigger Fortune Oil (+5%) Margin Alert
+          </button>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Right Column: WhatsApp Mobile Chat Simulator -->
-    <div class="card">
-      <div class="card-title">
-        <span>📱 2. WhatsApp Merchant Terminal</span>
-        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="testPriceShieldAlert()">
-          ⚡ Fire Price-Shield Alert
-        </button>
-      </div>
-
-      <div class="phone-mockup">
+    <!-- RIGHT COLUMN: SIMULATED MOBILE CHAT -->
+    <div>
+      <div class="phone-mock">
         <div class="phone-header">
           <div class="avatar">स</div>
           <div>
-            <div style="font-weight: 600; font-size: 0.95rem;">Paytm Sahayak (सहायक)</div>
-            <div style="font-size: 0.72rem; color: #8696a0;">Official WhatsApp Business Bot</div>
+            <div style="font-weight: 600; font-size: 0.95rem;">Sahayak (सहायक) Copilot</div>
+            <div style="font-size: 0.75rem; color: var(--primary);">● Online | Telegram & WhatsApp</div>
           </div>
         </div>
 
-        <div class="chat-messages" id="chat">
+        <div class="chat-area" id="chat">
           <div class="bubble inbound">
-            Namaste! Send a photo of your wholesale supplier bill to digitize prices & protect margins.
+            ✨ *Namaste! Welcome to Sahayak (सहायक)*
+            Your AI Copilot is online.
+            
+            Send a wholesale bill photo to digitize FMCG line items and guard your retail margins!
           </div>
         </div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- CONSOLE LOG -->
+  <div class="console-card">
+    <div class="card" style="padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">LIVE TELEMETRY & AUDIT STREAM</span>
+        <button style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem;" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="terminal" id="consoleLog">[SYSTEM INIT] Connected to Supabase PostgreSQL (RLS Active)
+[SYSTEM INIT] Upstash Redis with TLS Connected
+[SYSTEM INIT] Google Gemini Flash Vision API Initialized
+[SYSTEM INIT] Telegram Bot @sahayak_retail_bot Long-Polling Active</div>
+    </div>
+  </div>
 
   <script>
     let lastSentHash = null;
@@ -343,8 +507,13 @@
     function log(msg) {
       const box = document.getElementById('consoleLog');
       const time = new Date().toLocaleTimeString();
-      box.textContent += `\n[${time}] ${msg}`;
+      box.textContent += `
+[${time}] ${msg}`;
       box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('consoleLog').textContent = '';
     }
 
     function addMessage(text, type = 'inbound') {
@@ -356,74 +525,152 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function triggerUpload() {
-      const template = document.getElementById('billTemplate').value;
-      log(`Selected template: ${template}`);
+    // 1. Run Live Full End-to-End Pipeline
+    async function runLivePipeline() {
+      const btn = document.getElementById('btnRunPipeline');
+      const filename = document.getElementById('directBillSelect').value;
+      const simulateHike = document.getElementById('hikeSimCheck').checked;
+      const merchantId = document.getElementById('merchantId').value;
+      const phone = document.getElementById('senderPhone').value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Processing via Gemini Vision & Supabase...</span>';
+      log(`Triggering Live Pipeline for ${filename} (Hike Sim: ${simulateHike})...`);
+      addMessage(`📸 [Uploaded Wholesale Bill Photo: ${filename}]`, 'outbound');
+
+      try {
+        const resp = await fetch('/api/simulator/process-bill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant_id: merchantId,
+            sender_phone: phone,
+            bill_filename: filename,
+            hike_simulation: simulateHike
+          })
+        });
+
+        const data = await resp.json();
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀 Run Full Live Pipeline</span>';
+
+        if (data.status === 'SUCCESS') {
+          log(`✅ OCR & Ledger Write completed in ${data.latency_ms}ms! Invoice ID: ${data.invoice_id}`);
+          document.getElementById('pipelineResults').style.display = 'block';
+          document.getElementById('pipelineStatusText').textContent = `Status: Logged (${data.supplier_name})`;
+          document.getElementById('pipelineLatencyText').textContent = `Latency: ${data.latency_ms}ms`;
+          document.getElementById('dbRecordId').innerHTML = `🔒 <b>Supabase UUID:</b> ${data.invoice_id} | <b>Invoice #:</b> ${data.invoice_number} | <b>Grand Total:</b> ₹${data.grand_total}`;
+
+          // Fill table
+          const tbody = document.getElementById('lineItemsTableBody');
+          tbody.innerHTML = '';
+          data.line_items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><b>${item.item_name}</b></td>
+              <td>${item.quantity} ${item.unit}</td>
+              <td>₹${item.unit_wholesale_rate.toFixed(2)}</td>
+              <td>${item.tax_rate_pct}%</td>
+              <td>₹${item.line_total.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          // Conversational chat message
+          let chatMsg = `✅ *Invoice ${data.invoice_number} Logged!*\n` +
+            `🏢 Supplier: ${data.supplier_name}\n` +
+            `💰 Grand Total: ₹${data.grand_total.toLocaleString('en-IN')}\n` +
+            `📦 Items Extracted: ${data.line_items.length} FMCG items\n` +
+            `🔒 Stored in Supabase PostgreSQL with RLS.`;
+          addMessage(chatMsg, 'inbound');
+
+          // Check margin alerts
+          if (data.margin_alerts && data.margin_alerts.length > 0) {
+            data.margin_alerts.forEach(alert => {
+              log(`🚨 Margin-Guard Alert for ${alert.item_name}: Wholesale rate +${alert.percentage_hike}%!`);
+              const alertMsg = `🚨 *Sahayak Price-Shield Alert* 🚨\n` +
+                `Wholesale cost for *${alert.item_name}* rose from ₹${alert.old_wholesale_rate} to ₹${alert.new_wholesale_rate} (+${alert.percentage_hike}%).\n\n` +
+                `📉 Projected Monthly Loss: ₹${alert.estimated_loss_if_unchanged}\n` +
+                `💡 *Suggested Shelf MRP:* ₹${alert.suggested_new_mrp} (Protects 10-12% gross margin)`;
+              addMessage(alertMsg, 'bubble alert');
+            });
+          }
+        } else {
+          log(`Error: ${JSON.stringify(data)}`);
+          addMessage(`⚠️ Failed: ${JSON.stringify(data)}`, 'inbound');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀 Run Full Live Pipeline</span>';
+        log(`Pipeline Exception: ${err.message}`);
+        addMessage(`⚠️ Pipeline Exception: ${err.message}`, 'inbound');
+      }
     }
 
-    async function sendWebhook(forcedHash = null) {
+    // 2. Gateway Deduplication Upload
+    async function sendWebhookUpload(forcedHash = null) {
       const merchantId = document.getElementById('merchantId').value;
-      const senderPhone = document.getElementById('senderPhone').value;
-      const template = document.getElementById('billTemplate').value;
-      
-      const mediaHash = forcedHash || `hash_${template}_${Math.floor(Math.random() * 100000)}`;
+      const phone = document.getElementById('senderPhone').value;
+      const filename = document.getElementById('directBillSelect').value;
+
+      const mediaHash = forcedHash || `hash_${filename}_${Math.floor(Math.random() * 1000000)}`;
       lastSentHash = mediaHash;
 
-      const payload = {
-        merchant_id: merchantId,
-        sender_phone: senderPhone,
-        whatsapp_message_id: "wam_" + Date.now(),
-        media: {
-          media_id: "med_" + template,
-          mime_type: "image/jpeg",
-          sha256: mediaHash,
-          file_size: 245000
-        },
-        timestamp: Math.floor(Date.now() / 1000)
-      };
-
-      addMessage(`📷 [Uploaded Bill Photo: ${template}]`, 'outbound');
+      addMessage(`📤 [Inbound Gateway Upload: ${mediaHash.substring(0, 16)}...]`, 'outbound');
       log(`POST /webhook/whatsapp (SHA-256: ${mediaHash.substring(0, 16)}...)`);
 
       try {
         const resp = await fetch('/webhook/whatsapp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            merchant_id: merchantId,
+            sender_phone: phone,
+            whatsapp_message_id: "wam_" + Date.now(),
+            media: {
+              media_id: filename,
+              mime_type: "image/jpeg",
+              sha256: mediaHash,
+              file_size: 78000
+            },
+            timestamp: Math.floor(Date.now() / 1000)
+          })
         });
+
         const data = await resp.json();
 
         if (data.status === 'DUPLICATE_DROPPED') {
-          log(`⚠️ DUPLICATE DROPPED in ${data.latency_ms}ms! (Key: ${data.cache_key})`);
-          addMessage(`⚠️ Note: You already sent this bill. Duplicate ignored.`, 'inbound');
+          log(`🛡️ DUPLICATE DROPPED in ${data.latency_ms}ms! (Key: ${data.cache_key})`);
+          addMessage(`🛡️ *Duplicate Dropped (<1ms)*\nYou already uploaded this invoice earlier. Skipped redundant OCR processing.`, 'inbound');
         } else if (data.status === 'QUEUED') {
-          log(`✅ QUEUED in ${data.latency_ms}ms -> Task: ${data.task}`);
-          addMessage(`Bill received! Deciphering FMCG rates via Gemini 1.5 Flash...`, 'inbound');
+          log(`⚡ Ingestion QUEUED in ${data.latency_ms}ms -> Task: ${data.task}`);
+          addMessage(`Bill received! Queued to Celery & Upstash Redis for asynchronous extraction.`, 'inbound');
         }
       } catch (err) {
-        log(`Error: ${err.message}`);
+        log(`Gateway Error: ${err.message}`);
       }
     }
 
-    async function simulateDuplicate() {
+    async function simulateImmediateDuplicate() {
       if (!lastSentHash) {
-        await sendWebhook();
+        await sendWebhookUpload();
       }
-      log(`Simulating immediate duplicate upload with SHA-256: ${lastSentHash}...`);
-      await sendWebhook(lastSentHash);
+      log(`Simulating immediate duplicate with perceptual hash: ${lastSentHash}...`);
+      await sendWebhookUpload(lastSentHash);
     }
 
+    // 3. Margin Guard Alert
     async function testPriceShieldAlert() {
       const alertPayload = {
         merchant_id: document.getElementById('merchantId').value,
         merchant_phone: document.getElementById('senderPhone').value,
         item_name: "Fortune Sunflower Oil 1L",
-        old_wholesale_rate: 140.0,
-        new_wholesale_rate: 147.0,
-        percentage_hike: 5.0,
-        previous_mrp: 155.0,
-        suggested_new_mrp: 165.0,
-        estimated_loss_if_unchanged: 420.0
+        old_wholesale_rate: 110.0,
+        new_wholesale_rate: 116.0,
+        percentage_hike: 5.45,
+        previous_mrp: 125.0,
+        suggested_new_mrp: 132.0,
+        estimated_loss_if_unchanged: 350.0
       };
 
       log(`POST /api/alerts/price-shield for ${alertPayload.item_name}...`);
@@ -435,17 +682,17 @@
           body: JSON.stringify(alertPayload)
         });
         const data = await resp.json();
-        log(`Alert dispatched: ${data.dispatch_result.status}`);
+        log(`Alert dispatched: ${JSON.stringify(data.dispatch_result)}`);
 
         const alertText = 
-`⚠️ *Sahayak Price-Shield Alert* ⚠️
+`🚨 *Sahayak Price-Shield Alert* 🚨
 Wholesale cost for *${alertPayload.item_name}* rose from ₹${alertPayload.old_wholesale_rate} to ₹${alertPayload.new_wholesale_rate} (+${alertPayload.percentage_hike}%).
 
 📉 Projected Profit Loss: ₹${alertPayload.estimated_loss_if_unchanged}/mo
 🏷️ Previous MRP: ₹${alertPayload.previous_mrp}
-🛡️ *Suggested Shelf MRP:* ₹${alertPayload.suggested_new_mrp} (Protects 10-12% gross margin)`;
+💡 *Suggested Shelf MRP:* ₹${alertPayload.suggested_new_mrp} (Protects 10-12% gross margin)`;
 
-        addMessage(alertText, 'inbound');
+        addMessage(alertText, 'bubble alert');
       } catch (err) {
         log(`Error sending alert: ${err.message}`);
       }

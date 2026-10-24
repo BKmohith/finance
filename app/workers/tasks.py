@@ -52,6 +52,21 @@ def fetch_media_from_storage_or_meta(media_id: str) -> bytes:
     if fixture_candidate.is_file() and fixture_candidate.exists():
         return fixture_candidate.read_bytes()
 
+    # If media_id is a Telegram file_id, download directly from Telegram API
+    try:
+        import httpx
+        from app.core.config import settings as app_settings
+        bot_token = app_settings.TELEGRAM_BOT_TOKEN
+        if bot_token and not bot_token.startswith("mock_"):
+            gf_resp = httpx.get(f"https://api.telegram.org/bot{bot_token}/getFile?file_id={media_id}", timeout=10.0)
+            if gf_resp.status_code == 200 and gf_resp.json().get("ok"):
+                fpath = gf_resp.json()["result"]["file_path"]
+                dl_resp = httpx.get(f"https://api.telegram.org/file/bot{bot_token}/{fpath}", timeout=20.0)
+                if dl_resp.status_code == 200:
+                    return dl_resp.content
+    except Exception as e:
+        logger.warning(f"Could not download Telegram file {media_id}: {e}")
+
     # Fallback placeholder for unit test mocks
     logger.info("Generating in-memory dummy image for mock media_id: %s", media_id)
     import numpy as np
@@ -103,21 +118,27 @@ def process_invoice_task(
 
         # Step 5: Save to Laptop 2 Database Repository (or mocked during isolated dev)
         saved_invoice_id: Optional[str] = None
+        alerts = []
         try:
+            from app.db.session import get_rls_session
             from app.db import repository, margin_guard
-            saved_invoice = repository.save_extracted_invoice(merchant_id, validated_data)
-            saved_invoice_id = str(saved_invoice.id)
 
-            # Step 6: Margin Guard Price-Shield Checks & Laptop 1 Alerts
-            alerts = margin_guard.evaluate_price_deviations(merchant_id, saved_invoice.id)
+            with get_rls_session(merchant_id) as session:
+                saved_invoice = repository.save_extracted_invoice(session, merchant_id, validated_data)
+                saved_invoice_id = str(saved_invoice.id)
+
+                # Step 6: Margin Guard Price-Shield Checks & Alerts
+                alerts = margin_guard.evaluate_price_deviations(session, merchant_id, saved_invoice.id)
+                session.commit()
+
             if alerts:
                 try:
-                    from app.api import notifier
+                    from app.api.notifier import whatsapp_notifier
                     for alert in alerts:
                         alert.merchant_phone = sender_phone
-                        notifier.send_price_shield_alert(alert)
+                        whatsapp_notifier.send_price_shield_alert(alert)
                 except (ImportError, Exception) as notif_err:
-                    logger.warning("Laptop 1 notifier not available in isolated mode: %s", notif_err)
+                    logger.warning("Laptop 1 notifier error: %s", notif_err)
 
         except (ImportError, Exception) as db_err:
             logger.info("Laptop 2 DB repository not connected (running isolated): %s", db_err)
