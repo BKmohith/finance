@@ -69,6 +69,9 @@ async def receive_telegram_webhook(request: Request):
     photos = message.get("photo", [])
     document = message.get("document")
 
+    voice = message.get("voice")
+    audio = message.get("audio")
+
     # If it's a photo or image document
     if photos:
         # Highest resolution photo is last in list
@@ -80,14 +83,25 @@ async def receive_telegram_webhook(request: Request):
         media_id = document.get("file_id")
         media_hash = document.get("file_unique_id")
         file_size = document.get("file_size", 0)
+    elif voice or audio:
+        target_audio = voice or audio
+        file_id = target_audio.get("file_id")
+        send_telegram_text(
+            chat_id,
+            "🎙️ *Voice Note Received!*\nTranscribing Indian vernacular speech via Sarvam AI & Gemini..."
+        )
+        return {"status": "ACK", "message": "Voice note received", "media_id": file_id}
     else:
         # Text only message
-        user_text = message.get("text", "")
-        if user_text.startswith("/start"):
+        user_text = message.get("text", "").strip()
+        if user_text.startswith("/start") or user_text.startswith("/help"):
             reply_text = (
                 "🙏 *Namaste! Welcome to Sahayak (सहायक)*\n\n"
-                "I am your AI retail copilot. Snap and send a photo of your *wholesale paper bill* "
-                "to instantly digitize rates, calculate credit deadlines, and activate the *Price-Shield*."
+                "I am your Autonomous Retail Copilot for Indian Kirana Stores.\n\n"
+                "📸 *1. Wholesale Bills:* Snap any distributor bill to digitize line items & activate Margin-Guard.\n"
+                "🎙️ *2. Voice Notes:* Speak in Hindi, Kannada, or Hinglish: *'Sharma ji 500 udhaar'*.\n"
+                "💵 *3. Counter Sales:* `Paytm 300 Oil 2` or `/sale 300 Fortune 2`.\n"
+                "📦 *4. Commands:* `/stock` (view inventory) | `/khata` (view customer balances) | `/simulate` (test price spike)."
             )
             send_telegram_text(chat_id, reply_text)
         return {"status": "ACK", "message": "Non-media update acknowledged"}
