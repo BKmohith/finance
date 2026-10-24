@@ -1,6 +1,7 @@
 """
 app/core/config.py
 Central application configuration loaded from environment variables or .env file.
+Supports both Telegram Bot API and Meta WhatsApp Cloud API.
 """
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,14 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     PORT: int = 8000
     HOST: str = "0.0.0.0"
+
+    # --- Communication Channel ---
+    NOTIFICATION_CHANNEL: str = "telegram"  # "telegram" or "whatsapp"
+
+    # --- Telegram Bot API ---
+    TELEGRAM_BOT_TOKEN: str = "8205381745:AAFqdHI0ZmzfOArZ5NIvJG4ALEUimitGLfo"
+    TELEGRAM_API_BASE: str = "https://api.telegram.org"
+    ENABLE_TELEGRAM_POLLING: bool = True
 
     # --- Meta WhatsApp Cloud API ---
     WHATSAPP_API_TOKEN: str = "mock_token_dev_2026"
