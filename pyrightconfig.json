@@ -1,0 +1,12 @@
+{
+  "include": [
+    "app",
+    "tests"
+  ],
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "pythonPath": "C:\\Users\\asusm\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "extraPaths": [
+    "C:\\Users\\asusm\\finance"
+  ]
+}
