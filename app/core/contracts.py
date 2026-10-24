@@ -50,7 +50,7 @@ class ExtractedInvoiceData(BaseModel):
 # --- 3. Price-Shield Deviation Alert (Used by Laptop 2 & Laptop 1) ---
 class PriceHikeAlert(BaseModel):
     merchant_id: str = Field(description="Merchant ID")
-    merchant_phone: str = Field(description="Merchant phone for alert delivery")
+    merchant_phone: Optional[str] = Field(default=None, description="Merchant phone for alert delivery")
     item_name: str = Field(description="Product SKU name")
     old_wholesale_rate: float = Field(description="Previous wholesale rate per unit")
     new_wholesale_rate: float = Field(description="Current new wholesale rate per unit")

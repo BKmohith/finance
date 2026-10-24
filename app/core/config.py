@@ -1,7 +1,7 @@
 """
 app/core/config.py
 Central application configuration loaded from environment variables or .env file.
-Supports both Telegram Bot API and Meta WhatsApp Cloud API.
+Supports Database (Supabase PostgreSQL), Telegram Bot API, and Meta WhatsApp Cloud API.
 """
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     PORT: int = 8000
     HOST: str = "0.0.0.0"
+
+    # --- Database (Supabase PostgreSQL) ---
+    DATABASE_URL: str = "postgresql://postgres.qhuzerpsnkxmbjrkaadz:Mohithbk%402007@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
 
     # --- Communication Channel ---
     NOTIFICATION_CHANNEL: str = "telegram"  # "telegram" or "whatsapp"
@@ -47,3 +50,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Direct export for database modules
+DATABASE_URL = settings.DATABASE_URL
