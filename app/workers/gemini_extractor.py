@@ -7,8 +7,8 @@ from typing import Optional, Any, List
 from google import genai
 from google.genai import types
 
-from app.core.config import settings
-from app.core.contracts import ExtractedInvoiceData
+from app.workers.config import settings
+from app.workers.contracts import ExtractedInvoiceData
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import pytest
 import cv2
 import numpy as np
 
-from app.core.contracts import (
+from app.workers.contracts import (
     ExtractedInvoiceData,
     ExtractedLineItem,
     PriceHikeAlert,
@@ -29,7 +29,7 @@ from app.workers.guardrails import (
 )
 from app.workers.gemini_extractor import extract_invoice_from_image
 from app.workers.tasks import process_invoice_task, fetch_media_from_storage_or_meta
-from app.core.config import settings
+from app.workers.config import settings
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "bills"
 

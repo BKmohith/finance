@@ -7,7 +7,7 @@ import logging
 from typing import List, Tuple
 from pydantic import BaseModel
 
-from app.core.contracts import ExtractedInvoiceData, ExtractedLineItem
+from app.workers.contracts import ExtractedInvoiceData, ExtractedLineItem
 
 logger = logging.getLogger(__name__)
 

@@ -42,12 +42,10 @@ finance/
 ├── 1lap3.md                      # This architecture & status document
 │
 ├── app/
-│   ├── core/
-│   │   ├── contracts.py          # [SHARED FROZEN CONTRACT] ExtractedInvoiceData, LineItem schemas
-│   │   └── config.py             # Settings (Gemini API key, model, Celery broker)
-│   │
-│   └── workers/                  # 👈 [LAPTOP 3 EXCLUSIVE DOMAIN]
+│   └── workers/                  # 👈 [LAPTOP 3 EXCLUSIVE DOMAIN - ZERO MERGE CONFLICT]
 │       ├── __init__.py
+│       ├── config.py             # Dedicated Worker settings (Gemini API key, model, Celery broker)
+│       ├── contracts.py          # Worker Pydantic contracts & schemas (ExtractedInvoiceData, etc.)
 │       ├── preprocessor.py       # OpenCV contrast, CLAHE, bilateral filtering, deskewing
 │       ├── gemini_extractor.py   # Gemini Flash Vision OCR (via google-genai)
 │       ├── guardrails.py         # Arithmetic & mathematical integrity validator

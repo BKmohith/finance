@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from celery import Celery
 
-from app.core.config import settings
-from app.core.contracts import (
+from app.workers.config import settings
+from app.workers.contracts import (
     CELERY_INVOICE_TASK_NAME,
     ExtractedInvoiceData,
     PriceHikeAlert,
