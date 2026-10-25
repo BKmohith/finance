@@ -18,16 +18,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import httpx
+import sys
+print(">>> [app.main] Initializing Sahayak FastAPI Gateway...", flush=True)
 
-from app.api.deduplication import deduplication_engine
-from app.api.routes import (
-    router as api_router,
-    send_telegram_text,
-    edit_telegram_text,
-    send_telegram_chat_action
-)
-from app.core.config import settings
-from app.core.contracts import CELERY_INVOICE_TASK_NAME
+try:
+    from app.api.deduplication import deduplication_engine
+    from app.api.routes import (
+        router as api_router,
+        send_telegram_text,
+        edit_telegram_text,
+        send_telegram_chat_action
+    )
+    from app.core.config import settings
+    from app.core.contracts import CELERY_INVOICE_TASK_NAME
+except Exception as _init_err:
+    print(f">>> [app.main] CRITICAL IMPORT FAILURE: {_init_err}", file=sys.stderr, flush=True)
+    import traceback
+    traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+    raise _init_err
 
 # Configure structured logging
 logging.basicConfig(
