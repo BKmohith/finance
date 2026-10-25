@@ -8,8 +8,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import DATABASE_URL
 
 # Create SQLAlchemy engine with connection pool
+db_url = DATABASE_URL
+try:
+    import psycopg  # noqa: F401
+except ImportError:
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 engine = create_engine(
-    DATABASE_URL,
+    db_url,
     pool_size=5,
     max_overflow=5,
     pool_pre_ping=True,
