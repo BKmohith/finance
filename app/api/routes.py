@@ -89,15 +89,18 @@ async def receive_telegram_webhook(request: Request):
     if user_text:
         parts = user_text.split()
         cmd = parts[0].lower()
-        if cmd in ("/start", "/link", "/activate", "/register") and len(parts) > 1:
+        if cmd in ("/start", "/link", "/login", "/auth", "/activate", "/register", "link", "login", "auth", "activate", "connect", "register") and len(parts) > 1:
             is_link_cmd = True
             target_m_id = parts[1].strip()
-        elif cmd.startswith(("/start_", "/link_")):
+        elif cmd.startswith(("/start_", "/link_", "/login_")):
             is_link_cmd = True
             target_m_id = cmd.split("_", 1)[1].strip()
-        elif user_text.startswith("M_") and len(parts) == 1:
+        elif re.search(r"\bM_[A-Za-z0-9_]+\b", user_text, re.IGNORECASE):
             is_link_cmd = True
-            target_m_id = user_text.strip()
+            target_m_id = re.search(r"\bM_[A-Za-z0-9_]+\b", user_text, re.IGNORECASE).group(0).strip()
+        elif re.search(r"\b(?:\+91|91)?([6-9]\d{9})\b", user_text):
+            is_link_cmd = True
+            target_m_id = re.search(r"\b(?:\+91|91)?([6-9]\d{9})\b", user_text).group(1).strip()
 
     if is_link_cmd and target_m_id:
         linked_merchant = link_chat_to_merchant(chat_id, target_m_id)
@@ -108,7 +111,8 @@ async def receive_telegram_webhook(request: Request):
                 f"🆔 *Merchant ID:* `{linked_merchant['id']}`\n"
                 f"📍 *Location:* {linked_merchant.get('city') or 'Bengaluru'}\n"
                 f"🔒 *Ledger Security:* 100% Private ACID Store Ledger Active\n\n"
-                f"Welcome! Only you can view or manage this store's listings and Khata."
+                f"Welcome! Only you can view or manage this store's listings and Khata.\n\n"
+                f"👉 Use `/logout` anytime to sign out."
             )
             send_telegram_text(chat_id, welcome_msg)
             return {"status": "LINKED", "merchant_id": linked_merchant["id"]}
@@ -117,20 +121,20 @@ async def receive_telegram_webhook(request: Request):
                 f"❌ *Invalid Merchant ID*\n\n"
                 f"We couldn't find any registered store with ID `{target_m_id}`.\n\n"
                 f"👉 Please register your store first at: http://localhost:8000/login.html\n"
-                f"Once registered, send: `/link <YOUR_MERCHANT_ID>`"
+                f"Once registered, send: `/login <YOUR_MERCHANT_ID>`"
             )
             send_telegram_text(chat_id, err_msg)
             return {"status": "INVALID_MERCHANT_ID"}
 
-    if user_text == "/unlink":
+    if user_text.lower() in ("/logout", "logout", "/unlink", "unlink", "/exit", "exit"):
         if merchant_info:
             unlink_chat_from_merchant(chat_id)
             send_telegram_text(
                 chat_id,
-                "🔓 *Store Account Unlinked.*\nYour Telegram account has been disconnected from your store.\nTo reconnect, send `/link <YOUR_MERCHANT_ID>`."
+                "🔒 *Logged Out Successfully*\n\nYour Telegram account has been disconnected and your store ledger is locked.\nTo reconnect, reply with `/login <YOUR_MERCHANT_ID>`."
             )
         else:
-            send_telegram_text(chat_id, "ℹ️ You are not currently linked to any store.")
+            send_telegram_text(chat_id, "ℹ️ You are not currently logged into any store.")
         return {"status": "UNLINKED"}
 
     # Gatekeeper: Block unregistered chats immediately

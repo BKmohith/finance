@@ -90,6 +90,10 @@ async def telegram_long_poll_worker():
     try:
         cmd_url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/setMyCommands"
         bot_commands = [
+            {"command": "start", "description": "Welcome & Store Status"},
+            {"command": "login", "description": "Authenticate store (Merchant ID)"},
+            {"command": "logout", "description": "Lock & sign out of store"},
+            {"command": "whoami", "description": "View active store profile"},
             {"command": "margin", "description": "Agent 1: Price-Hike Defense (Pure SQL)"},
             {"command": "stock", "description": "Agent 2: Shelf Stock & Locked Capital (Pure SQL)"},
             {"command": "liquidity", "description": "Agent 3: Cash, Udhaar & Payables (Pure SQL)"},
@@ -158,11 +162,11 @@ async def telegram_long_poll_worker():
                             parts = text.split()
                             cmd = parts[0].lower() if parts else ""
 
-                            # /start M_... or /link M_... or connect M_...
-                            if cmd in ("/start", "/link", "/activate", "/register", "link", "activate", "connect", "register") and len(parts) > 1:
+                            # /start M_... or /link M_... or /login M_... or connect M_...
+                            if cmd in ("/start", "/link", "/login", "/auth", "/activate", "/register", "link", "login", "auth", "activate", "connect", "register") and len(parts) > 1:
                                 is_link_cmd = True
                                 target_m_id = parts[1].strip()
-                            elif cmd.startswith(("/start_", "/link_")):
+                            elif cmd.startswith(("/start_", "/link_", "/login_")):
                                 is_link_cmd = True
                                 target_m_id = cmd.split("_", 1)[1].strip()
                             # Direct Merchant ID pattern: M_XXXX_YYYY
@@ -190,77 +194,120 @@ async def telegram_long_poll_worker():
                                     f" • 📸 *Wholesale Bill:* Send photo of distributor invoice\n"
                                     f" • 💵 *Record Sale:* _\"28 units sunflower oil 8000\"_\n"
                                     f" • 📊 *Daily Report:* _\"create report of the day\"_\n"
-                                    f" • 📦 *Shelf Stock:* `/stock`"
+                                    f" • 📦 *Shelf Stock:* `/stock`\n"
+                                    f" • 🔒 *Sign Out:* `/logout`"
                                 )
                                 send_telegram_text(chat_id, welcome_msg)
                             else:
                                 err_msg = (
                                     f"❌ *Store Not Found for:* `{target_m_id}`\n\n"
                                     f"Please check your Merchant ID or registered phone number from: http://localhost:8000/login.html\n\n"
-                                    f"Once checked, reply with: `/link <YOUR_MERCHANT_ID>`"
+                                    f"Once checked, reply with: `/login <YOUR_MERCHANT_ID>`"
                                 )
                                 send_telegram_text(chat_id, err_msg)
                             continue
 
-                        # Check /unlink command
-                        if text == "/unlink":
+                        # Check /logout or /unlink command
+                        if text and text.lower() in ("/logout", "logout", "/unlink", "unlink", "/exit", "exit", "/signout", "signout"):
                             from app.db.repository import unlink_chat_from_merchant, get_registered_merchant_for_chat
                             if get_registered_merchant_for_chat(chat_id):
                                 unlink_chat_from_merchant(chat_id)
                                 send_telegram_text(
                                     chat_id,
-                                    "🔓 *Store Account Unlinked.*\nYour Telegram account has been disconnected from your store.\nTo reconnect, send `/link <YOUR_MERCHANT_ID>`."
+                                    "🔒 *Logged Out Successfully*\n\n"
+                                    "Your Telegram account has been disconnected and your store ledger is now locked.\n\n"
+                                    "🔑 *To Log In Again:*\n"
+                                    "Reply with your **Merchant ID** (e.g. `M_MOHITH_A5AN`) or your registered 10-digit phone number."
                                 )
                             else:
-                                send_telegram_text(chat_id, "ℹ️ You are not currently linked to any store.")
+                                send_telegram_text(chat_id, "ℹ️ You are not currently logged into any store.")
                             continue
 
-                        # Check /whoami or /myaccount command
-                        if text in ("/whoami", "/myaccount"):
+                        # Check /whoami or /myaccount or /profile command
+                        if text and text.lower() in ("/whoami", "/myaccount", "/profile", "/status"):
                             from app.db.repository import get_registered_merchant_for_chat
                             current_m = get_registered_merchant_for_chat(chat_id)
                             if current_m:
                                 send_telegram_text(
                                     chat_id,
                                     f"🏪 *Linked Store Account*\n\n"
-                                    f"• Store: {current_m['name']}\n"
+                                    f"• Store: *{current_m['name']}*\n"
                                     f"• Merchant ID: `{current_m['id']}`\n"
                                     f"• Phone: {current_m.get('phone') or 'N/A'}\n"
                                     f"• City: {current_m.get('city') or 'N/A'}\n"
-                                    f"• Isolation: Dedicated Tenant Database Ledger\n\n"
-                                    f"To switch or unlink accounts, send `/unlink`."
+                                    f"• Isolation: Dedicated Tenant Database Ledger (RLS Active)\n\n"
+                                    f"👉 To switch stores, reply with `/login <NEW_MERCHANT_ID>`\n"
+                                    f"👉 To log out, send `/logout`."
                                 )
                             else:
-                                send_telegram_text(chat_id, "⛔ Your Telegram account is not registered to any store.")
+                                send_telegram_text(chat_id, "⛔ Your Telegram account is not logged into any store.\nReply with your **Merchant ID** to authenticate.")
+                            continue
+
+                        # Check /login or /auth command alone without arguments
+                        if text and text.lower() in ("/login", "login", "/auth", "auth", "/connect", "connect"):
+                            from app.db.repository import get_registered_merchant_for_chat
+                            current_m = get_registered_merchant_for_chat(chat_id)
+                            if current_m:
+                                send_telegram_text(
+                                    chat_id,
+                                    f"🏪 *Already Logged In*\n\n"
+                                    f"You are connected to *{current_m['name']}* (`{current_m['id']}`).\n\n"
+                                    f"👉 To switch stores, reply with: `/login <NEW_MERCHANT_ID>`\n"
+                                    f"👉 To log out, send `/logout`."
+                                )
+                            else:
+                                send_telegram_text(
+                                    chat_id,
+                                    "🔑 *Store Authentication Required*\n\n"
+                                    "Please reply with your **Merchant ID** (e.g. `M_MOHITH_A5AN`) or your **registered 10-digit phone number** to log into your store."
+                                )
+                            continue
+
+                        # Check /start command alone
+                        if text and text.lower() in ("/start", "start"):
+                            from app.db.repository import get_registered_merchant_for_chat
+                            current_m = get_registered_merchant_for_chat(chat_id)
+                            if current_m:
+                                welcome_back = (
+                                    f"👋 *Namaste, {current_m['name']}!*\n\n"
+                                    f"🏪 *Active Store:* {current_m['name']} (`{current_m['id']}`)\n"
+                                    f"🔒 *Ledger Security:* 100% Private ACID Store Ledger Active\n\n"
+                                    f"*Quick Actions:*\n"
+                                    f" • 🎙️ *Voice Note:* Speak _\"Sharma ji 500 udhaar\"_\n"
+                                    f" • 📸 *Wholesale Bill:* Send photo of distributor invoice\n"
+                                    f" • 💵 *Record Sale:* _\"28 units sunflower oil 8000\"_\n"
+                                    f" • 📊 *Daily Report:* _\"create report of the day\"_\n"
+                                    f" • 📦 *Shelf Stock:* `/stock`\n"
+                                    f" • 🔒 *Sign Out:* `/logout`"
+                                )
+                                send_telegram_text(chat_id, welcome_back)
+                            else:
+                                auth_prompt = (
+                                    "👋 *Namaste! Welcome to Sahayak (सहायक) Retail Copilot*\n\n"
+                                    "I am your autonomous store manager for counter sales, customer Udhaar, and wholesale pricing.\n\n"
+                                    "🔐 *Authentication Required:*\n"
+                                    "To access your store's private ledger, please authenticate.\n\n"
+                                    "👉 Reply with your **Merchant ID** (e.g. `M_MOHITH_A5AN`) or your **registered 10-digit phone number**.\n\n"
+                                    "🌐 Don't have a store ID yet? Register at: http://localhost:8000/login.html"
+                                )
+                                send_telegram_text(chat_id, auth_prompt)
                             continue
 
                         # ----------------------------------------------------
-                        # B. GATEKEEPER: HANDLE UNREGISTERED CHATS
+                        # B. GATEKEEPER: BLOCK UNREGISTERED / UNAUTHENTICATED CHATS
                         # ----------------------------------------------------
                         from app.db.repository import get_registered_merchant_for_chat
                         merchant_info = get_registered_merchant_for_chat(chat_id)
                         if not merchant_info:
-                            greeting_triggers = ("/start", "start", "/help", "help", "hi", "hello", "hey", "namaste", "login")
-                            lower_text = text.lower() if text else ""
-                            if lower_text in greeting_triggers or not text:
-                                unlinked_intro = (
-                                    "👋 *Namaste! Welcome to Sahayak (सहायक) Retail Copilot*\n\n"
-                                    "I am your autonomous store manager for counter sales, customer Udhaar, and wholesale pricing.\n\n"
-                                    "🔑 *Connect Your Store to Activate:*\n"
-                                    "Reply with your **Merchant ID** (e.g. `M_KRISHNA_7B2F`) or your **registered 10-digit phone number**.\n\n"
-                                    "👉 If you haven't registered your store yet, visit: http://localhost:8000/login.html"
-                                )
-                                send_telegram_text(chat_id, unlinked_intro)
-                            else:
-                                access_denied_msg = (
-                                    "⛔ *Store Not Connected*\n\n"
-                                    "Your Telegram chat is not yet linked to any Sahayak retail ledger.\n\n"
-                                    "📋 *Quick Activation:*\n"
-                                    "1️⃣ Find your Merchant ID on: http://localhost:8000/login.html\n"
-                                    "2️⃣ Reply here with: `/link <YOUR_MERCHANT_ID>` (or your 10-digit phone number)\n\n"
-                                    "Once linked, you can record voice sales, upload bills, and track Khata!"
-                                )
-                                send_telegram_text(chat_id, access_denied_msg)
+                            access_denied_msg = (
+                                "⛔ *Authentication Required*\n\n"
+                                "Your Telegram chat is not logged into any Sahayak retail ledger.\n\n"
+                                "🔑 *How to Authenticate:*\n"
+                                "1️⃣ Find your Merchant ID on: http://localhost:8000/login.html\n"
+                                "2️⃣ Reply here with: `/login <YOUR_MERCHANT_ID>` (or your 10-digit phone number)\n\n"
+                                "Once authenticated, you can record voice sales, upload wholesale bills, and track Khata!"
+                            )
+                            send_telegram_text(chat_id, access_denied_msg)
                             continue
 
                         # User is registered & authorized!
