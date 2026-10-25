@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
 
     # --- Database (Supabase PostgreSQL) ---
-    DATABASE_URL: str = "postgresql://postgres.qhuzerpsnkxmbjrkaadz:Mohithbk%402007@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
+    DATABASE_URL: str = "postgresql://postgres.qhuzerpsnkxmbjrkaadz:Mohithbk%402007@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres"
 
     # --- Communication Channel ---
     NOTIFICATION_CHANNEL: str = "telegram"  # "telegram" or "whatsapp"

@@ -166,6 +166,7 @@ class CashForecastAgent:
         first_sale_dt = None
         dow_multipliers: Dict[int, float] = {}
         historical_log_count = 0
+        daily_logs: List[Any] = []
 
         try:
             with get_rls_session(clean_merchant) as session:

@@ -208,6 +208,30 @@ def link_chat_to_merchant(chat_id: int | str, merchant_id: str) -> Optional[Dict
             stmt = select(Merchant).where(or_(*conditions))
             merchant = session.execute(stmt).scalars().first()
             if not merchant:
+                if clean_id.upper().startswith("M_") or (clean_digits and len(clean_digits) >= 10):
+                    # Auto-provision store in PostgreSQL so frontend-created or newly connected stores work instantly
+                    name_raw = clean_id.upper().replace("M_", "").split("_")[0]
+                    derived_name = f"{name_raw.capitalize()}'s Kirana & General Store" if name_raw else "Retail Store"
+                    derived_phone = clean_digits if (clean_digits and len(clean_digits) >= 10) else "+919845012345"
+
+                    merchant = Merchant(
+                        id=clean_id,
+                        name=derived_name,
+                        phone=derived_phone,
+                        city="Bengaluru, Karnataka",
+                        business_type="Kirana & FMCG Retail",
+                        telegram_chat_id=str_chat
+                    )
+                    session.add(merchant)
+                    session.commit()
+                    logger.info(f"Auto-provisioned store {clean_id} for Telegram chat {str_chat}")
+                    return {
+                        "id": merchant.id,
+                        "name": merchant.name,
+                        "phone": merchant.phone,
+                        "city": merchant.city,
+                        "business_type": merchant.business_type
+                    }
                 return None
 
             # Clear this chat_id from any previously linked merchants to avoid collisions
