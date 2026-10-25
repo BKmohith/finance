@@ -27,398 +27,50 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const saved = localStorage.getItem('sahayak_merchant');
     if (saved) merchantData = JSON.parse(saved);
-  } catch (e) { }
+  } catch (e) {}
 
-  // If merchant_id was provided in query string, persist it immediately so reloads/navigation stick
-  if (merchantId) {
-    if (!merchantData || merchantData.merchant_id !== merchantId) {
-      merchantData = Object.assign({}, merchantData || {}, { merchant_id: merchantId });
-      try {
-        localStorage.setItem('sahayak_merchant', JSON.stringify(merchantData));
-      } catch (e) { }
-    }
-  }
-
-  // Determine active merchant ID (defaults to primary linked store M_MOHITH_6DWS if unset)
+  // Determine active merchant ID
   let activeMerchantId = merchantId || (merchantData ? merchantData.merchant_id : '');
-  if (!activeMerchantId) {
+  if (!activeMerchantId || activeMerchantId === 'M_NEW_MERCHANT') {
     activeMerchantId = 'M_MOHITH_6DWS';
   }
-  let latestPayablesList = [];
 
-  // Determine if this is an explicit Demo showcase account or a genuine Merchant store
-  const isDemoAccount = (
-    urlParams.get('demo') === '1' ||
-    urlParams.get('demo') === 'true' ||
-    activeMerchantId === 'M_DEMO' ||
-    activeMerchantId === 'M_DEMO_STORE' ||
-    activeMerchantId === 'DEMO'
-  );
+  // Persist active store ID
+  try {
+    const stored = JSON.parse(localStorage.getItem('sahayak_merchant') || '{}');
+    stored.merchant_id = activeMerchantId;
+    localStorage.setItem('sahayak_merchant', JSON.stringify(stored));
+  } catch (e) {}
+
+  let latestPayablesList = [];
 
   const storeText = document.getElementById('storeIdentityText');
   const navTag = document.getElementById('navMerchantIdTag');
 
   function updateMerchantHeader(data) {
-    const mid = data ? data.merchant_id : activeMerchantId;
-    let bName = data ? data.business_name : (merchantData ? merchantData.business_name : '');
-    let city = data ? data.city : (merchantData ? merchantData.city : 'Bengaluru');
-    const isTg = data ? data.is_telegram_active : (merchantData ? merchantData.is_telegram_active : false);
-
-    if (!bName) {
-      bName = isDemoAccount ? "Mohith's Kirana & General Store" : "Store Ledger Active";
-    }
-
+    const mid = (data && data.merchant_id) ? data.merchant_id : activeMerchantId;
+    const bName = (data && data.business_name) ? data.business_name : (merchantData ? merchantData.business_name : 'Retail Store');
+    const city = (data && data.city) ? data.city : (merchantData ? merchantData.city : 'Bengaluru');
+    
     if (storeText) {
-      storeText.textContent = `Store #${mid} • ${bName}${city ? ` (${city})` : ''}`;
+      storeText.textContent = `Store #${mid} • ${bName} (${city})`;
     }
     if (navTag) {
       navTag.textContent = mid;
     }
 
-    // Update Telegram Status Pill in Header
-    const tgPill = document.getElementById('telegramStatusPill');
-    if (tgPill) {
-      if (isTg) {
-        tgPill.innerHTML = `
-          <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(36, 161, 222, 0.12); color: #0088cc; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(36, 161, 222, 0.25);" title="Telegram Bot Connected (@sahayak_retail_bot). Click to manage.">
-            <span style="font-size: 0.85rem;">⚡</span> Telegram Synced
-          </span>
-        `;
-      } else {
-        tgPill.innerHTML = `
-          <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(201, 151, 46, 0.12); color: #9A6F14; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(201, 151, 46, 0.3);" title="Click to connect Telegram Bot (@sahayak_retail_bot)">
-            <span style="font-size: 0.85rem;">📱</span> Link Telegram
-          </span>
-        `;
+    try {
+      if (mid) {
+        const stored = JSON.parse(localStorage.getItem('sahayak_merchant') || '{}');
+        stored.merchant_id = mid;
+        if (bName) stored.business_name = bName;
+        if (city) stored.city = city;
+        localStorage.setItem('sahayak_merchant', JSON.stringify(stored));
       }
-      tgPill.onclick = () => window.openStoreSwitcherModal && window.openStoreSwitcherModal();
-    }
-
-    if (data && data.merchant_id) {
-      try {
-        localStorage.setItem('sahayak_merchant', JSON.stringify({
-          merchant_id: data.merchant_id,
-          business_name: bName,
-          city: city,
-          is_telegram_active: !!data.is_telegram_active
-        }));
-      } catch (e) { }
-    }
+    } catch (e) {}
   }
 
   updateMerchantHeader(merchantData);
-
-  // Wire Sample Demo vs Clean Store Ledger Toggle Button
-  const btnToggleDemoData = document.getElementById('btnToggleDemoData');
-  if (btnToggleDemoData) {
-    if (isDemoAccount) {
-      btnToggleDemoData.innerHTML = '🧹 View Clean Store';
-      btnToggleDemoData.title = 'Switch to clean zero-state store ledger';
-      btnToggleDemoData.style.background = '#F3F4F6';
-      btnToggleDemoData.style.color = '#181513';
-    } else {
-      btnToggleDemoData.innerHTML = '✨ Sample Demo';
-      btnToggleDemoData.title = 'Preview with sample Kirana store dataset';
-    }
-
-    btnToggleDemoData.addEventListener('click', () => {
-      const newUrl = new URL(window.location.href);
-      if (isDemoAccount) {
-        newUrl.searchParams.delete('demo');
-        if (activeMerchantId === 'M_DEMO' || activeMerchantId === 'M_DEMO_STORE' || activeMerchantId === 'DEMO') {
-          newUrl.searchParams.set('merchant_id', (merchantData && merchantData.merchant_id) ? merchantData.merchant_id : 'M_NEW_STORE');
-        }
-      } else {
-        newUrl.searchParams.set('demo', '1');
-      }
-      window.location.href = newUrl.toString();
-    });
-  }
-
-  // Backend API Resolution & Safe JSON Helpers
-  function getApiBaseUrl() {
-    const custom = localStorage.getItem('sahayak_backend_url');
-    if (custom && custom.trim()) {
-      return custom.trim().replace(/\/+$/, '');
-    }
-    return '';
-  }
-
-  async function safeReadJson(resp) {
-    if (!resp) return null;
-    try {
-      const ct = resp.headers ? resp.headers.get('content-type') : '';
-      if (ct && !ct.includes('application/json') && !ct.includes('text/json')) {
-        return null;
-      }
-      const text = await resp.text();
-      if (!text || !text.trim()) return null;
-      return JSON.parse(text);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Autonomous Storage Helpers Scoped by Merchant ID
-  function getStoredDebtors() {
-    try {
-      const raw = localStorage.getItem('sahayak_debtors_' + activeMerchantId);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { }
-    return [];
-  }
-  function saveStoredDebtors(list) {
-    try {
-      localStorage.setItem('sahayak_debtors_' + activeMerchantId, JSON.stringify(list));
-    } catch (e) { }
-  }
-
-  function getStoredPayables() {
-    try {
-      const raw = localStorage.getItem('sahayak_payables_' + activeMerchantId);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { }
-    return [];
-  }
-  function saveStoredPayables(list) {
-    try {
-      localStorage.setItem('sahayak_payables_' + activeMerchantId, JSON.stringify(list));
-    } catch (e) { }
-  }
-
-  function getStoredInventory() {
-    try {
-      const raw = localStorage.getItem('sahayak_inventory_' + activeMerchantId);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { }
-    return [];
-  }
-  function saveStoredInventory(list) {
-    try {
-      localStorage.setItem('sahayak_inventory_' + activeMerchantId, JSON.stringify(list));
-    } catch (e) { }
-  }
-
-  function getStoredMetrics() {
-    try {
-      const raw = localStorage.getItem('sahayak_metrics_' + activeMerchantId);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { }
-    return null;
-  }
-  function saveStoredMetrics(m) {
-    try {
-      localStorage.setItem('sahayak_metrics_' + activeMerchantId, JSON.stringify(m));
-    } catch (e) { }
-  }
-
-  function getStoredMarginAlerts() {
-    try {
-      const raw = localStorage.getItem('sahayak_margin_alerts_' + activeMerchantId);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { }
-    return [];
-  }
-
-  // A. Clean Zero-State Store Data for genuine merchant accounts
-  function getCleanStoreData() {
-    const bName = (merchantData && merchantData.business_name) || "Store Ledger Active";
-    const city = (merchantData && merchantData.city) || "Bengaluru";
-
-    const debtors = getStoredDebtors();
-    const payables = getStoredPayables();
-    const inventory = getStoredInventory();
-    const marginAlerts = getStoredMarginAlerts();
-    const savedMetrics = getStoredMetrics() || {};
-
-    const receivablesKhata = debtors.reduce((sum, d) => sum + (parseFloat(d.balance) || 0), 0);
-    const payablesUpcoming = payables.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-
-    return {
-      status: "success",
-      merchant_id: activeMerchantId,
-      business_name: bName,
-      city: city,
-      kpis: {
-        today_inflow: savedMetrics.today_inflow || 0.0,
-        cash_inflow: savedMetrics.cash_inflow || 0.0,
-        upi_inflow: savedMetrics.upi_inflow || 0.0,
-        sales_count: savedMetrics.sales_count || 0,
-        receivables_khata: receivablesKhata,
-        debtors_count: debtors.length,
-        payables_upcoming: payablesUpcoming,
-        payables_count: payables.length,
-        margin_alerts_count: marginAlerts.length
-      },
-      debtors: debtors,
-      payables: payables,
-      inventory: inventory,
-      margin_alerts: marginAlerts
-    };
-  }
-
-  // B. Sample Demo Store Data (Only loaded when ?demo=1 or demo merchant)
-  function getSampleDemoStoreData() {
-    const bName = (merchantData && merchantData.business_name) || "Mohith's Kirana & General Store";
-    const city = (merchantData && merchantData.city) || "Bengaluru";
-    return {
-      status: "success",
-      merchant_id: activeMerchantId || "M_DEMO_STORE",
-      business_name: bName,
-      city: city,
-      kpis: {
-        today_inflow: 14850.00,
-        cash_inflow: 6200.00,
-        upi_inflow: 8650.00,
-        sales_count: 38,
-        receivables_khata: 18450.00,
-        debtors_count: 4,
-        payables_upcoming: 26500.00,
-        payables_count: 3,
-        margin_alerts_count: 2
-      },
-      debtors: [
-        { name: "Ramesh Kumar", phone: "9845012345", balance: 3200.00, limit: 5000.00, last_repay: "2 days ago", rating: "LOW RISK" },
-        { name: "Suresh Gowda", phone: "9845098765", balance: 4850.00, limit: 5000.00, last_repay: "Yesterday", rating: "MEDIUM RISK" },
-        { name: "Lakshmi Stores & Mess", phone: "9845045678", balance: 6400.00, limit: 10000.00, last_repay: "5 days ago", rating: "LOW RISK" },
-        { name: "Anand Electronics", phone: "9845034567", balance: 4000.00, limit: 8000.00, last_repay: "1 week ago", rating: "MEDIUM RISK" }
-      ],
-      payables: [
-        { supplier_name: "Sri Balaji Traders (Fortune Oil)", invoice_number: "INV-9042", amount: 12500.00, due_date: "2026-10-28", days_until_due: 2 },
-        { supplier_name: "ITC Distributors (Atta & Biscuits)", invoice_number: "INV-8911", amount: 8500.00, due_date: "2026-10-31", days_until_due: 5 },
-        { supplier_name: "Hindustan Unilever Depot", invoice_number: "INV-9150", amount: 5500.00, due_date: "2026-11-04", days_until_due: 9 }
-      ],
-      inventory: [
-        { id: "inv_1", item_name: "Fortune Sunlite Sunflower Oil 1L", retail_mrp: 145, cost_price: 122, quantity: 45, batch_number: "FIFO-B01", unit: "pouches" },
-        { id: "inv_2", item_name: "Aashirvaad Shudh Chakki Atta 5kg", retail_mrp: 275, cost_price: 238, quantity: 30, batch_number: "FIFO-B02", unit: "bags" },
-        { id: "inv_3", item_name: "Tata Salt Vacuum Evaporated 1kg", retail_mrp: 28, cost_price: 22, quantity: 80, batch_number: "FIFO-B03", unit: "packets" },
-        { id: "inv_4", item_name: "Maggi 2-Minute Masala Noodles 70g", retail_mrp: 14, cost_price: 11.5, quantity: 120, batch_number: "FIFO-B04", unit: "packs" },
-        { id: "inv_5", item_name: "Madhur Pure & Hygienic Sugar 1kg", retail_mrp: 52, cost_price: 44, quantity: 65, batch_number: "FIFO-B05", unit: "kg" },
-        { id: "inv_6", item_name: "Dettol Original Bathing Soap 75g", retail_mrp: 38, cost_price: 31, quantity: 50, batch_number: "FIFO-B06", unit: "bars" },
-        { id: "inv_7", item_name: "Parle-G Gold Glucose Biscuits 1kg", retail_mrp: 90, cost_price: 76, quantity: 40, batch_number: "FIFO-B07", unit: "packs" },
-        { id: "inv_8", item_name: "Organic Tattva Fresh Toor Dal 1kg", retail_mrp: 168, cost_price: 142, quantity: 35, batch_number: "FIFO-B08", unit: "kg" }
-      ],
-      margin_alerts: [
-        { item_name: "Fortune Sunlite Sunflower Oil 1L", old_cost: 103.00, new_cost: 122.00, spike_pct: 18.5, supplier: "Sri Balaji Traders", date: "2026-10-24" },
-        { item_name: "Aashirvaad Shudh Chakki Atta 5kg", old_cost: 214.00, new_cost: 238.00, spike_pct: 11.2, supplier: "ITC Distributors", date: "2026-10-22" }
-      ]
-    };
-  }
-
-  function getDefaultStoreData() {
-    return isDemoAccount ? getSampleDemoStoreData() : getCleanStoreData();
-  }
-
-  // C. Clean Zero-State Forecast Generator
-  function getCleanForecastData(recoveryRate = null) {
-    const city = (merchantData && merchantData.city) ? `${merchantData.city}, Karnataka` : "Bengaluru, Karnataka";
-    const payables = getStoredPayables();
-    const totalCommittedPayables = payables.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    const savedMetrics = getStoredMetrics() || {};
-    const baseVelocity = parseFloat(savedMetrics.today_inflow || (liveMetrics ? liveMetrics.today_inflow : 0) || 0);
-
-    const now = new Date();
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const trajectory = [];
-    let rollingBalance = 0;
-
-    for (let i = 1; i <= 15; i++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() + (i - 1));
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const dayLabel = `${dateStr} (${dayNames[d.getDay()]})`;
-
-      let dayOutflow = 0;
-      payables.forEach(p => {
-        if (p.due_date === dateStr || (p.days_until_due && p.days_until_due === i)) {
-          dayOutflow += parseFloat(p.amount) || 0;
-        }
-      });
-
-      const dayInflow = Math.round(baseVelocity);
-      rollingBalance = rollingBalance + dayInflow - dayOutflow;
-
-      trajectory.push({
-        day: i,
-        date: dayLabel,
-        multiplier: 1.00,
-        event: baseVelocity > 0 ? "Daily Retail Projection" : "Store Initialized (Zero State)",
-        projected_inflow: dayInflow,
-        committed_outflow: dayOutflow,
-        projected_balance: rollingBalance
-      });
-    }
-
-    const hasCrunch = rollingBalance < 0;
-
-    return {
-      status: "success",
-      merchant_id: activeMerchantId,
-      location: city,
-      velocity_3d: baseVelocity,
-      velocity_6d: baseVelocity,
-      blended_velocity: baseVelocity,
-      committed_supplier_payables: totalCommittedPayables,
-      has_cash_crunch: hasCrunch,
-      shortfall_amount: hasCrunch ? Math.abs(rollingBalance) : 0.0,
-      recommendations: [
-        baseVelocity > 0
-          ? `Cash flow trajectory dynamically calculated from ₹${baseVelocity.toFixed(2)} active counter velocity.`
-          : "Clean store ledger initialized at ₹0.00. Ring up counter sales at POS or add customer Khata to simulate your 15-day dynamic cash flow trajectory."
-      ],
-      upcoming_invoices: payables.map(p => ({
-        supplier: p.supplier_name || p.supplier || 'Distributor',
-        amount: parseFloat(p.amount) || 0,
-        days_until_due: p.days_until_due || 7
-      })),
-      trajectory: trajectory
-    };
-  }
-
-  // D. Sample Demo Forecast Data
-  function getSampleDemoForecastData() {
-    const city = (merchantData && merchantData.city) ? `${merchantData.city}, Karnataka` : "Bengaluru, Karnataka";
-    return {
-      status: "success",
-      merchant_id: activeMerchantId || "M_DEMO_STORE",
-      location: city,
-      velocity_3d: 14200.0,
-      velocity_6d: 13800.0,
-      blended_velocity: 14040.0,
-      committed_supplier_payables: 26500.0,
-      has_cash_crunch: false,
-      shortfall_amount: 0.0,
-      recommendations: [
-        "Strong liquidity buffer maintained. Surplus projected to remain above ₹18,000 safety floor despite upcoming distributor cheques."
-      ],
-      upcoming_invoices: [
-        { supplier: "Sri Balaji Traders", amount: 12500.0, days_until_due: 2 },
-        { supplier: "ITC Distributors", amount: 8500.0, days_until_due: 5 },
-        { supplier: "Hindustan Unilever", amount: 5500.0, days_until_due: 9 }
-      ],
-      trajectory: [
-        { day: 1, date: "2026-10-26 (Mon)", multiplier: 1.00, event: "Regular Monday Kirana Restock", projected_inflow: 14040, committed_outflow: 0, projected_balance: 14040 },
-        { day: 2, date: "2026-10-27 (Tue)", multiplier: 0.98, event: "Midweek Grocery Consumption", projected_inflow: 13759, committed_outflow: 12500, projected_balance: 15299 },
-        { day: 3, date: "2026-10-28 (Wed)", multiplier: 1.02, event: "Midweek FMCG Steady Footfall", projected_inflow: 14320, committed_outflow: 0, projected_balance: 29619 },
-        { day: 4, date: "2026-10-29 (Thu)", multiplier: 1.05, event: "Pre-Weekend Staples Refill", projected_inflow: 14742, committed_outflow: 0, projected_balance: 44361 },
-        { day: 5, date: "2026-10-30 (Fri)", multiplier: 1.15, event: "Friday Evening Household Surge", projected_inflow: 16146, committed_outflow: 8500, projected_balance: 52007 },
-        { day: 6, date: "2026-10-31 (Sat)", multiplier: 1.25, event: "Weekend Kirana Grocery Peak", projected_inflow: 17550, committed_outflow: 0, projected_balance: 69557 },
-        { day: 7, date: "2026-11-01 (Sun)", multiplier: 1.30, event: "Kannada Rajyotsava State Festival (Bengaluru)", projected_inflow: 18252, committed_outflow: 0, projected_balance: 87809 },
-        { day: 8, date: "2026-11-02 (Mon)", multiplier: 1.10, event: "Month-Beginning Salary Disbursals Wave 1", projected_inflow: 15444, committed_outflow: 0, projected_balance: 103253 },
-        { day: 9, date: "2026-11-03 (Tue)", multiplier: 1.08, event: "Corporate & Tech Park Salary Credited", projected_inflow: 15163, committed_outflow: 5500, projected_balance: 112916 },
-        { day: 10, date: "2026-11-04 (Wed)", multiplier: 1.04, event: "Household Pantry Bulk Grocery Buys", projected_inflow: 14601, committed_outflow: 0, projected_balance: 127517 },
-        { day: 11, date: "2026-11-05 (Thu)", multiplier: 1.02, event: "5th of Month Recurring Khata Settlements", projected_inflow: 14320, committed_outflow: 0, projected_balance: 141837 },
-        { day: 12, date: "2026-11-06 (Fri)", multiplier: 1.06, event: "Weekend Preparation Outings", projected_inflow: 14882, committed_outflow: 0, projected_balance: 156719 },
-        { day: 13, date: "2026-11-07 (Sat)", multiplier: 1.22, event: "Second Weekend FMCG Basket Surge", projected_inflow: 17128, committed_outflow: 0, projected_balance: 173847 },
-        { day: 14, date: "2026-11-08 (Sun)", multiplier: 1.20, event: "Sunday Family Cooking & Snacks", projected_inflow: 16848, committed_outflow: 0, projected_balance: 190695 },
-        { day: 15, date: "2026-11-09 (Mon)", multiplier: 1.00, event: "Baseline Weekday Kirana Replenishment", projected_inflow: 14040, committed_outflow: 0, projected_balance: 204735 }
-      ]
-    };
-  }
-
-  function getDefaultForecastData(recoveryRate = null) {
-    return isDemoAccount ? getSampleDemoForecastData() : getCleanForecastData(recoveryRate);
-  }
 
   // 3. Soundbox Web Audio Chime Generator
   function playSoundboxChime(amount, mode) {
@@ -502,125 +154,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 6. Dynamic Backend Metrics Fetcher
   async function loadLiveDashboardMetrics() {
-    let data = null;
     try {
-      const baseUrl = getApiBaseUrl();
-      const resp = await fetch(`${baseUrl}/api/v1/auth/metrics?merchant_id=${encodeURIComponent(activeMerchantId)}`);
-      if (resp.ok) {
-        const parsed = await safeReadJson(resp);
-        if (parsed && parsed.status === 'success') {
-          data = parsed;
-        }
+      const resp = await fetch(`/api/v1/auth/metrics?merchant_id=${encodeURIComponent(activeMerchantId)}`);
+      if (!resp.ok) return;
+
+      const data = await resp.json();
+      if (data.status !== 'success') return;
+
+      updateMerchantHeader(data);
+
+      const kpis = data.kpis || {};
+      liveMetrics = kpis;
+      activeDebtorsList = data.debtors || [];
+      latestPayablesList = data.payables || [];
+
+      // Update KPI Card 1: Today's Inflow
+      const kpiInflow = document.getElementById('kpiTodayInflow');
+      const kpiInflowSub = document.getElementById('kpiInflowSub');
+      if (kpiInflow) {
+        kpiInflow.textContent = `₹${(kpis.today_inflow || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       }
+      if (kpiInflowSub) {
+        kpiInflowSub.innerHTML = `
+          <span id="kpiTxnCount">${kpis.sales_count || 0} Sales</span> • ₹${(kpis.cash_inflow || 0).toFixed(2)} Cash / ₹${(kpis.upi_inflow || 0).toFixed(2)} UPI
+        `;
+      }
+
+      // Update KPI Card 2: Customer Udhaar (Khata)
+      const kpiKhata = document.getElementById('kpiKhataBalance');
+      const kpiKhataSub = document.getElementById('kpiKhataSub');
+      const tabBadge = document.getElementById('tabKhataCountBadge');
+      if (kpiKhata) {
+        kpiKhata.textContent = `₹${(kpis.receivables_khata || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+      if (kpiKhataSub) {
+        kpiKhataSub.textContent = `${kpis.debtors_count || 0} Active debtors in ledger`;
+      }
+      if (tabBadge) {
+        tabBadge.textContent = kpis.debtors_count || 0;
+      }
+
+      // Update KPI Card 3: Supplier Payables
+      const kpiPayables = document.getElementById('kpiPayablesBalance');
+      const kpiPayablesSub = document.getElementById('kpiPayablesSub');
+      if (kpiPayables) {
+        kpiPayables.textContent = `₹${(kpis.payables_upcoming || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+      if (kpiPayablesSub) {
+        kpiPayablesSub.textContent = `${kpis.payables_count || 0} Upcoming supplier bills`;
+      }
+
+      // Update KPI Card 4: Margin-Guard Shield
+      const kpiMargin = document.getElementById('kpiMarginShield');
+      const kpiMarginSub = document.getElementById('kpiMarginSub');
+      const tabMarginBadge = document.getElementById('tabMarginBadge');
+      if (kpiMargin) {
+        kpiMargin.textContent = `${kpis.margin_alerts_count || 0} Protected`;
+      }
+      if (kpiMarginSub) {
+        kpiMarginSub.textContent = `${kpis.margin_alerts_count || 0} Wholesale price spike alerts`;
+      }
+      if (tabMarginBadge) {
+        tabMarginBadge.textContent = kpis.margin_alerts_count || 0;
+      }
+
+      // Update Khata Table
+      renderKhataTable(activeDebtorsList);
+
+      // Update POS Customer Dropdown
+      updatePosCustomerDropdown(activeDebtorsList);
+
+      // Update Margin Guard & Dead Capital
+      renderMarginGuard(data);
+
+      // Derive POS product catalog dynamically from merchant's real DB inventory (0 items for new merchants)
+      if (data.inventory && data.inventory.length > 0) {
+        catalogData = data.inventory.map((item, idx) => ({
+          id: item.id || ('item_' + idx),
+          batch_id: item.id || '',
+          name: item.item_name,
+          category: 'all',
+          price: item.retail_mrp || Math.round(item.cost_price * 1.15),
+          cost: item.cost_price || 0,
+          stock: item.quantity,
+          batch: item.batch_number || 'FIFO-01',
+          unit: item.unit || 'units'
+        }));
+      } else {
+        catalogData = [];
+      }
+      renderCatalog();
+
+      // Fetch and draw Dynamic 14-Day Cash-Flow Forecast
+      loadDynamicForecast();
+
     } catch (err) {
-      console.warn('Backend metrics note (running autonomous / offline):', err);
+      console.warn('Could not fetch live dashboard metrics:', err);
     }
-
-    // Fallback to rich, realistic store dataset if backend is offline on Netlify
-    if (!data) {
-      data = getDefaultStoreData();
-    }
-
-    updateMerchantHeader(data);
-
-    const kpis = data.kpis || {};
-    liveMetrics = kpis;
-    activeDebtorsList = data.debtors || [];
-    latestPayablesList = data.payables || [];
-
-    // Sync database payables, inventory, debtors into localStorage cache for instant persistence
-    if (data.payables && Array.isArray(data.payables)) {
-      saveStoredPayables(data.payables);
-    }
-    if (data.inventory && Array.isArray(data.inventory)) {
-      saveStoredInventory(data.inventory);
-    }
-    if (data.debtors && Array.isArray(data.debtors)) {
-      saveStoredDebtors(data.debtors);
-    }
-    if (data.kpis) {
-      saveStoredMetrics(data.kpis);
-    }
-
-    // Update KPI Card 1: Today's Inflow
-    const kpiInflow = document.getElementById('kpiTodayInflow');
-    const kpiInflowSub = document.getElementById('kpiInflowSub');
-    if (kpiInflow) {
-      kpiInflow.textContent = `₹${(kpis.today_inflow || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    if (kpiInflowSub) {
-      kpiInflowSub.innerHTML = `
-        <span id="kpiTxnCount">${kpis.sales_count || 0} Sales</span> • ₹${(kpis.cash_inflow || 0).toFixed(2)} Cash / ₹${(kpis.upi_inflow || 0).toFixed(2)} UPI
-      `;
-    }
-
-    // Update KPI Card 2: Customer Udhaar (Khata)
-    const kpiKhata = document.getElementById('kpiKhataBalance');
-    const kpiKhataSub = document.getElementById('kpiKhataSub');
-    const tabBadge = document.getElementById('tabKhataCountBadge');
-    if (kpiKhata) {
-      kpiKhata.textContent = `₹${(kpis.receivables_khata || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    if (kpiKhataSub) {
-      kpiKhataSub.textContent = `${kpis.debtors_count || 0} Active debtors in ledger`;
-    }
-    if (tabBadge) {
-      tabBadge.textContent = kpis.debtors_count || 0;
-    }
-
-    // Update KPI Card 3: Supplier Payables
-    const kpiPayables = document.getElementById('kpiPayablesBalance');
-    const kpiPayablesSub = document.getElementById('kpiPayablesSub');
-    if (kpiPayables) {
-      kpiPayables.textContent = `₹${(kpis.payables_upcoming || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    if (kpiPayablesSub) {
-      kpiPayablesSub.textContent = `${kpis.payables_count || 0} Upcoming supplier bills`;
-    }
-
-    // Update KPI Card 4: Margin-Guard Shield
-    const kpiMargin = document.getElementById('kpiMarginShield');
-    const kpiMarginSub = document.getElementById('kpiMarginSub');
-    const tabMarginBadge = document.getElementById('tabMarginBadge');
-    if (kpiMargin) {
-      kpiMargin.textContent = `${kpis.margin_alerts_count || 0} Protected`;
-    }
-    if (kpiMarginSub) {
-      kpiMarginSub.textContent = `${kpis.margin_alerts_count || 0} Wholesale price spike alerts`;
-    }
-    if (tabMarginBadge) {
-      tabMarginBadge.textContent = kpis.margin_alerts_count || 0;
-    }
-
-    // Update Khata Table
-    renderKhataTable(activeDebtorsList);
-
-    // Update POS Customer Dropdown
-    updatePosCustomerDropdown(activeDebtorsList);
-
-    // Update Margin Guard & Dead Capital
-    renderMarginGuard(data);
-
-    // Derive POS product catalog dynamically from merchant's real DB inventory (0 items for new merchants)
-    if (data.inventory && data.inventory.length > 0) {
-      catalogData = data.inventory.map((item, idx) => ({
-        id: item.id || ('item_' + idx),
-        batch_id: item.batch_id || item.id || '',
-        name: item.item_name || item.name,
-        category: item.category || 'all',
-        price: item.retail_mrp || item.price || Math.round((item.cost_price || item.cost || 50) * 1.15),
-        cost: item.cost_price || item.cost || 0,
-        stock: (item.quantity !== undefined ? item.quantity : item.stock) || 0,
-        batch: item.batch_number || item.batch || 'FIFO-01',
-        unit: item.unit || 'units'
-      }));
-    } else {
-      catalogData = [];
-    }
-    renderCatalog();
-
-    // Fetch and draw Dynamic 15-Day Cash-Flow Forecast
-    loadDynamicForecast();
   }
 
   // 7. Render Khata Table (Dynamic & Zero-State aware)
@@ -687,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // WhatsApp reminder action
-  window.dispatchKhataWhatsApp = function (name, phone, amount) {
+  window.dispatchKhataWhatsApp = function(name, phone, amount) {
     const text = `ನಮಸ್ಕಾರ ${name} ಅವರೇ, ನಿಮ್ಮ ಖಾತೆಯ ಒಟ್ಟು ಬಾಕಿ ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ಆಗಿದೆ. ದಯವಿಟ್ಟು ಪಾವತಿಸಿ ಧನ್ಯವಾದಗಳು. (Namaste ${name}, your store khata balance is ₹${amount.toFixed(2)}. Sahayak Retail Ledger)`;
     const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
     if (cleanPhone && cleanPhone.length >= 10) {
@@ -698,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // CSV Export
-  window.exportKhataCSV = function () {
+  window.exportKhataCSV = function() {
     if (!activeDebtorsList || activeDebtorsList.length === 0) {
       alert('No customer khata records to export yet. Extend credit first.');
       return;
@@ -839,40 +469,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 9. Dynamic 15-Day Predictive Cash-Flow Simulator (Tab 3)
+  // 9. Dynamic 14-Day Predictive Cash-Flow Simulator (Tab 3)
   async function loadDynamicForecast(recoveryRate = null) {
-    let data = null;
     try {
-      const baseUrl = getApiBaseUrl();
-      let url = `${baseUrl}/api/counter/forecast?merchant_id=${encodeURIComponent(activeMerchantId)}&days=15`;
+      let url = `/api/counter/forecast?merchant_id=${encodeURIComponent(activeMerchantId)}&days=14`;
       if (recoveryRate !== null && recoveryRate !== undefined) {
         url += `&recovery_rate=${encodeURIComponent(recoveryRate)}`;
       }
       const resp = await fetch(url);
-      if (resp.ok) {
-        const parsed = await safeReadJson(resp);
-        if (parsed && parsed.trajectory && parsed.trajectory.length > 0) {
-          data = parsed;
-        }
-      }
+      if (!resp.ok) return;
+
+      const data = await resp.json();
+      rawForecastData = data;
+      renderForecastCurve(data);
     } catch (e) {
-      console.warn("Forecast fetch note (running autonomous / offline):", e);
+      console.warn("Forecast fetch error:", e);
     }
-
-    if (!data) {
-      data = getDefaultForecastData(recoveryRate);
-      if (isDemoAccount && recoveryRate !== null && recoveryRate !== undefined) {
-        const factor = recoveryRate / 60.0;
-        data.trajectory = data.trajectory.map(pt => ({
-          ...pt,
-          projected_inflow: Math.round(pt.projected_inflow * (0.85 + (0.15 * factor))),
-          projected_balance: Math.round(pt.projected_balance * (0.85 + (0.15 * factor)))
-        }));
-      }
-    }
-
-    rawForecastData = data;
-    renderForecastCurve(data);
   }
 
   function renderForecastCurve(data) {
@@ -890,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Determine Day 14 Net Cash & Insights
     const endPoint = trajectory[trajectory.length - 1];
     const finalBalance = endPoint ? endPoint.projected_balance : 0;
-
+    
     if (simDay14Cash) {
       simDay14Cash.textContent = `₹${finalBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
@@ -1021,97 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- Day Labels at Bottom -->
         <text x="${scaleX(0).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 1</text>
-        <text x="${scaleX(3).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 4</text>
-        <text x="${scaleX(7).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 8</text>
-        <text x="${scaleX(11).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 12</text>
-        <text x="${scaleX(trajectory.length - 1).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day ${trajectory.length}</text>
+        <text x="${scaleX(3).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 3</text>
+        <text x="${scaleX(7).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 7</text>
+        <text x="${scaleX(10).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 10</text>
+        <text x="${scaleX(14).toFixed(1)}" y="${H - 10}" fill="#847C75" font-size="10.5" font-family="var(--font-mono)">Day 14</text>
       </svg>
     `;
-
-    // Render 15-Day Hyper-Local Event & Demand Index Table
-    renderForecastTrajectoryTable(data);
-
-    // Update location badge and velocity pill
-    const locBadge = document.getElementById('forecastLocationBadge');
-    if (locBadge) {
-      locBadge.textContent = `📍 ${data.location || 'Bengaluru, Karnataka'}`;
-    }
-    const velPill = document.getElementById('forecastVelocityPill');
-    if (velPill) {
-      if (data.velocity_3d && data.velocity_6d) {
-        velPill.textContent = `⚡ 3d: ₹${Math.round(data.velocity_3d)} | 6d: ₹${Math.round(data.velocity_6d)}`;
-      } else {
-        velPill.textContent = `⚡ 3d/6d Blended Velocity`;
-      }
-    }
-  }
-
-  // 9b. Render 15-Day Hyper-Local Demand Index & Calendar Events Table
-  function renderForecastTrajectoryTable(data) {
-    const tbody = document.getElementById('forecastTableBody');
-    if (!tbody) return;
-
-    const trajectory = data.trajectory || [];
-    if (trajectory.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; padding: 24px; color: var(--color-text-muted);">
-            No trajectory data available.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = trajectory.map((pt, idx) => {
-      const dayNum = pt.day || (idx + 1);
-      const dateStr = pt.date || `Day ${dayNum}`;
-      const mult = pt.multiplier || pt.demand_index || 1.0;
-      const multVal = parseFloat(mult).toFixed(2);
-      const eventName = pt.event || pt.local_factor || 'Regular Trading Day';
-      const inflow = Math.round(pt.projected_inflow || pt.inflow || 0);
-      const outflow = Math.round(pt.committed_outflow || pt.outflow || 0);
-      const netBal = Math.round(pt.projected_balance || 0);
-
-      let badgeStyle = 'background: rgba(24,21,19,0.06); color: var(--color-text-body);';
-      if (mult > 1.1) {
-        badgeStyle = 'background: rgba(27,131,84,0.12); color: #0E623E; font-weight: 700;';
-      } else if (mult < 0.95) {
-        badgeStyle = 'background: rgba(227,83,108,0.12); color: #B31D38; font-weight: 700;';
-      } else if (mult >= 1.0) {
-        badgeStyle = 'background: rgba(121,82,179,0.12); color: #5B3A8C; font-weight: 700;';
-      }
-
-      const balColor = netBal >= 10000 ? '#1B8354' : (netBal >= 0 ? '#C9972E' : '#E3536C');
-
-      return `
-        <tr style="border-bottom: 1px solid rgba(24,21,19,0.05); transition: background 0.15s;">
-          <td style="padding: 10px 12px; font-weight: 700; font-family: var(--font-mono); font-size: 0.8rem;">
-            D+${dayNum}
-          </td>
-          <td style="padding: 10px 12px; font-size: 0.82rem; white-space: nowrap;">
-            ${dateStr}
-          </td>
-          <td style="padding: 10px 12px;">
-            <span class="mono-tag" style="${badgeStyle} font-size: 0.76rem; padding: 3px 8px; border-radius: 6px;">
-              ${multVal}x
-            </span>
-          </td>
-          <td style="padding: 10px 12px; font-size: 0.82rem; color: var(--color-text-title); max-width: 260px;">
-            ${eventName}
-          </td>
-          <td style="padding: 10px 12px; font-family: var(--font-mono); font-size: 0.82rem; color: #1B8354; font-weight: 600;">
-            +₹${inflow.toLocaleString('en-IN')}
-          </td>
-          <td style="padding: 10px 12px; font-family: var(--font-mono); font-size: 0.82rem; color: ${outflow > 0 ? '#E3536C' : 'var(--color-text-muted)'}; font-weight: 600;">
-            ${outflow > 0 ? '-₹' + outflow.toLocaleString('en-IN') : '—'}
-          </td>
-          <td style="padding: 10px 12px; font-family: var(--font-mono); font-size: 0.84rem; font-weight: 700; color: ${balColor};">
-            ₹${netBal.toLocaleString('en-IN')}
-          </td>
-        </tr>
-      `;
-    }).join('');
   }
 
   // 10. Update POS Customer Dropdown
@@ -1182,49 +709,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        const baseUrl = getApiBaseUrl();
-        try {
-          const resp = await fetch(`${baseUrl}/api/v1/auth/customer-khata`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              merchant_id: activeMerchantId,
-              customer_name: name,
-              customer_phone: phone,
-              initial_credit: initCredit,
-              notes: 'Opened via Retail Dashboard'
-            })
-          });
-          if (resp.ok) {
-            await loadLiveDashboardMetrics();
-          }
-        } catch (netErr) {
-          console.warn("Backend offline note, adding customer to local session:", netErr);
-        }
+        const resp = await fetch('/api/v1/auth/customer-khata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant_id: activeMerchantId,
+            customer_name: name,
+            customer_phone: phone,
+            initial_credit: initCredit,
+            notes: 'Opened via Retail Dashboard'
+          })
+        });
 
-        // Keep local debtor state in sync and persist under merchant ID
-        if (!activeDebtorsList.some(d => d.name === name)) {
-          activeDebtorsList.push({
-            name: name,
-            phone: phone || '',
-            balance: initCredit,
-            limit: Math.max(5000, initCredit * 1.5),
-            last_repay: 'Just added',
-            rating: 'LOW RISK'
-          });
-          saveStoredDebtors(activeDebtorsList);
-          liveMetrics.receivables_khata = (liveMetrics.receivables_khata || 0) + initCredit;
-          liveMetrics.debtors_count = activeDebtorsList.length;
-          saveStoredMetrics(liveMetrics);
-          renderKhataTable(activeDebtorsList);
-          updatePosCustomerDropdown(activeDebtorsList);
+        if (resp.ok) {
+          newCustModal.classList.remove('active');
+          newCustomerForm.reset();
+          await loadLiveDashboardMetrics();
+        } else {
+          const err = await resp.json();
+          alert('Could not create customer: ' + (err.detail || 'Server error'));
         }
-
-        newCustModal.classList.remove('active');
-        newCustomerForm.reset();
-        alert(`✓ Credit account created for ${name} (Balance: ₹${initCredit.toFixed(0)})`);
       } catch (err) {
-        console.error('Error adding customer:', err);
+        alert('Connection error: ' + err.message);
       }
     });
   }
@@ -1303,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Quick Amount Preset
-  window.addQuickCash = function (amount) {
+  window.addQuickCash = function(amount) {
     const customItem = {
       id: 'quick_' + Date.now(),
       name: `Counter Quick Item (₹${amount})`,
@@ -1457,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const tax = subtotal * 0.05;
     const grandTotal = Math.round(subtotal + tax);
-    const txnRef = `TXN-KN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${activeBillNo}`;
+    const txnRef = `TXN-KN-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${activeBillNo}`;
 
     // Resolve Customer if Udhaar
     let customerName = 'Counter Walk-In';
@@ -1540,37 +1046,6 @@ document.addEventListener('DOMContentLoaded', () => {
         catItem.stock = Math.max(0, catItem.stock - cartItem.qty);
       }
     });
-    saveStoredInventory(catalogData);
-
-    // Update live metrics & Khata customer balances locally
-    if (isCredit) {
-      let cust = activeDebtorsList.find(d => d.name === customerName);
-      if (cust) {
-        cust.balance = (parseFloat(cust.balance) || 0) + grandTotal;
-        cust.last_active = 'Just now';
-      } else {
-        activeDebtorsList.push({
-          name: customerName,
-          phone: customerPhone || '',
-          balance: grandTotal,
-          limit: Math.max(5000, grandTotal * 1.5),
-          last_active: 'Just now',
-          rating: 'LOW RISK'
-        });
-      }
-      saveStoredDebtors(activeDebtorsList);
-      liveMetrics.receivables_khata = (liveMetrics.receivables_khata || 0) + grandTotal;
-      liveMetrics.debtors_count = activeDebtorsList.length;
-    } else {
-      if (selectedPaymentMode === 'cash') {
-        liveMetrics.cash_inflow = (liveMetrics.cash_inflow || 0) + grandTotal;
-      } else {
-        liveMetrics.upi_inflow = (liveMetrics.upi_inflow || 0) + grandTotal;
-      }
-      liveMetrics.today_inflow = (liveMetrics.cash_inflow || 0) + (liveMetrics.upi_inflow || 0);
-      liveMetrics.sales_count = (liveMetrics.sales_count || 0) + 1;
-    }
-    saveStoredMetrics(liveMetrics);
 
     // Show Success Modal
     showSuccessModal({
@@ -1611,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('modalTxnRef').textContent = data.txnRef;
     document.getElementById('modalTxnTotal').textContent = `₹${data.grandTotal.toFixed(2)}`;
-
+    
     let modeText = '⚡ Paytm UPI Soundbox (Zero MDR)';
     if (data.mode === 'cash') modeText = '💵 Counter Cash Collected';
     if (data.mode === 'customer_khata') modeText = `📒 Udhaar Ledger: ${data.customerName}`;
@@ -1759,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fabIconSparkle) fabIconSparkle.style.display = 'inline-block';
       if (fabIconClose) fabIconClose.style.display = 'none';
       if (currentPlayingAudio) {
-        try { currentPlayingAudio.pause(); } catch (e) { }
+        try { currentPlayingAudio.pause(); } catch(e) {}
       }
     }
   }
@@ -1828,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Audio Playback with Sarvam Bulbul and Browser fallback
   function playVoiceResponse(audioBase64, spokenText, lang) {
     if (currentPlayingAudio) {
-      try { currentPlayingAudio.pause(); } catch (e) { }
+      try { currentPlayingAudio.pause(); } catch(e) {}
       currentPlayingAudio = null;
     }
 
@@ -2048,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
       try {
         voiceMediaRecorder.stop();
-      } catch (e) { }
+      } catch (e) {}
     } else {
       isVoiceRecording = false;
       updateRecordingUI(false);
@@ -2104,7 +1579,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- 0. EDIT COUNTER INFLOW & DISTRIBUTOR PAYABLES ---
-  window.openEditMetricsModal = function () {
+  window.openEditMetricsModal = function() {
     const editMetricCash = document.getElementById('editMetricCash');
     const editMetricUpi = document.getElementById('editMetricUpi');
     const editMetricSalesCount = document.getElementById('editMetricSalesCount');
@@ -2178,8 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const dueDate = document.getElementById('editMetricDueDate').value || null;
 
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/metrics/adjust`, {
+        const resp = await fetch('/api/counter/metrics/adjust', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2193,52 +1667,23 @@ document.addEventListener('DOMContentLoaded', () => {
           })
         });
 
-        const res = await safeReadJson(resp);
-        if (resp.ok && res && res.status === 'success') {
+        const res = await resp.json();
+        if (resp.ok && res.status === 'success') {
           closeModal('modalEditMetrics');
           await loadLiveDashboardMetrics();
           alert(`✓ Inflow & Distributor Payables updated successfully!\n\nToday's Inflow: ₹${(cashVal + upiVal).toFixed(2)}\nDistributor Payables: ₹${payablesVal.toFixed(2)}`);
         } else {
-          closeModal('modalEditMetrics');
-          liveMetrics.today_inflow = cashVal + upiVal;
-          liveMetrics.cash_inflow = cashVal;
-          liveMetrics.upi_inflow = upiVal;
-          liveMetrics.sales_count = salesCount;
-          liveMetrics.payables_upcoming = payablesVal;
-          saveStoredMetrics(liveMetrics);
-
-          if (payablesVal > 0 && suppName) {
-            let payables = getStoredPayables();
-            let existing = payables.find(p => (p.supplier_name === suppName || p.supplier === suppName));
-            if (existing) {
-              existing.amount = payablesVal;
-              if (dueDate) existing.due_date = dueDate;
-            } else {
-              payables.push({
-                supplier_name: suppName,
-                supplier: suppName,
-                invoice_number: 'INV-' + Math.floor(1000 + Math.random() * 9000),
-                amount: payablesVal,
-                due_date: dueDate || '2026-11-05',
-                days_until_due: 7
-              });
-            }
-            saveStoredPayables(payables);
-            latestPayablesList = payables;
-          }
-
-          await loadLiveDashboardMetrics();
-          alert(`✓ Inflow & Distributor Payables updated!\n\nToday's Inflow: ₹${(cashVal + upiVal).toFixed(2)}\nDistributor Payables: ₹${payablesVal.toFixed(2)}`);
+          alert('Could not update metrics: ' + (res.detail || res.message || 'Unknown error'));
         }
       } catch (err) {
-        console.warn('Metrics adjustment note (offline):', err);
-        closeModal('modalEditMetrics');
+        console.error('Error adjusting metrics:', err);
+        alert('Network error while saving metrics.');
       }
     });
   }
 
   // --- A. EDIT STORE PROFILE ---
-  window.openEditStoreModal = function () {
+  window.openEditStoreModal = function() {
     const editStoreName = document.getElementById('editStoreName');
     const editStoreCity = document.getElementById('editStoreCity');
     const editStorePhone = document.getElementById('editStorePhone');
@@ -2307,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- B. EDIT SHELF PRODUCT & ADD ITEM ---
-  window.openEditProductModal = function (item = null) {
+  window.openEditProductModal = function(item = null) {
     const title = document.getElementById('modalEditProductTitle');
     const prodName = document.getElementById('editProdName');
     const prodPrice = document.getElementById('editProdPrice');
@@ -2346,12 +1791,12 @@ document.addEventListener('DOMContentLoaded', () => {
     showModal('modalEditProduct');
   };
 
-  window.openEditProductModalById = function (id) {
+  window.openEditProductModalById = function(id) {
     const item = catalogData.find(c => c.id === id);
     window.openEditProductModal(item || null);
   };
 
-  window.openEditProductModalByName = function (name, suggestedPrice = null) {
+  window.openEditProductModalByName = function(name, suggestedPrice = null) {
     let item = catalogData.find(c => c.name.toLowerCase() === name.toLowerCase());
     if (!item) {
       item = { name: name, price: suggestedPrice || 50, cost: (suggestedPrice ? suggestedPrice * 0.85 : 40), stock: 10, batch: 'FIFO-01', unit: 'units' };
@@ -2379,36 +1824,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const unit = document.getElementById('editProdUnit').value;
       const batch = document.getElementById('editProdBatch').value.trim();
 
-      function applyLocalProductSave() {
-        let existing = catalogData.find(c => (origName && c.name.toLowerCase() === origName.toLowerCase()) || c.name.toLowerCase() === name.toLowerCase() || (bId && c.id === bId));
-        if (existing) {
-          existing.name = name;
-          existing.price = price;
-          existing.cost = cost;
-          existing.stock = stock;
-          existing.unit = unit;
-          existing.batch = batch || 'FIFO-01';
-        } else {
-          catalogData.push({
-            id: 'inv_' + Date.now(),
-            batch_id: bId || ('B0' + (catalogData.length + 1)),
-            name: name,
-            category: 'all',
-            price: price,
-            cost: cost,
-            stock: stock,
-            batch: batch || 'FIFO-01',
-            unit: unit || 'units'
-          });
-        }
-        saveStoredInventory(catalogData);
-        closeModal('modalEditProduct');
-        renderCatalog();
-      }
-
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/inventory/update`, {
+        const resp = await fetch('/api/counter/inventory/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2426,13 +1843,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resp.ok) {
           closeModal('modalEditProduct');
-          await loadLiveDashboardMetrics();
+          loadLiveDashboardMetrics();
         } else {
-          applyLocalProductSave();
+          alert('Failed to save product. Please check values.');
         }
       } catch (err) {
-        console.warn('Inventory update note (autonomous save):', err);
-        applyLocalProductSave();
+        console.error('Error updating inventory item:', err);
       }
     });
   }
@@ -2444,16 +1860,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const bId = document.getElementById('editProdBatchId').value.trim();
       if (!confirm(`Remove "${origName}" from your active shelf?`)) return;
 
-      function applyLocalProductDelete() {
-        catalogData = catalogData.filter(c => c.name !== origName && (!bId || c.id !== bId));
-        saveStoredInventory(catalogData);
-        closeModal('modalEditProduct');
-        renderCatalog();
-      }
-
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/inventory/delete`, {
+        const resp = await fetch('/api/counter/inventory/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2465,13 +1873,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resp.ok) {
           closeModal('modalEditProduct');
-          await loadLiveDashboardMetrics();
-        } else {
-          applyLocalProductDelete();
+          loadLiveDashboardMetrics();
         }
       } catch (err) {
-        console.warn('Product delete note (autonomous delete):', err);
-        applyLocalProductDelete();
+        console.error('Error deleting product:', err);
       }
     });
   }
@@ -2481,23 +1886,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClearStockToolbar) {
     btnClearStockToolbar.addEventListener('click', async () => {
       if (!confirm('Are you sure you want to reset all shelf stock to 0?')) return;
-      catalogData = [];
-      saveStoredInventory(catalogData);
-      renderCatalog();
-
       try {
-        const baseUrl = getApiBaseUrl();
-        await fetch(`${baseUrl}/api/counter/inventory/clear-all`, {
+        const resp = await fetch('/api/counter/inventory/clear-all', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ merchant_id: activeMerchantId })
         });
-      } catch (err) { }
+        if (resp.ok) {
+          loadLiveDashboardMetrics();
+        }
+      } catch (err) {
+        console.error('Error clearing inventory:', err);
+      }
     });
   }
 
   // --- C. EDIT CUSTOMER KHATA ACCOUNT ---
-  window.openEditCustomerModal = function (name, phone, balance) {
+  window.openEditCustomerModal = function(name, phone, balance) {
     const editName = document.getElementById('editCustName');
     const editPhone = document.getElementById('editCustPhone');
     const editBalance = document.getElementById('editCustBalance');
@@ -2528,31 +1933,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const bal = parseFloat(document.getElementById('editCustBalance').value || 0);
       const notes = document.getElementById('editCustNotes').value.trim();
 
-      function applyLocalCustomerSave() {
-        let existing = activeDebtorsList.find(d => (origName && d.name.toLowerCase() === origName.toLowerCase()) || d.name.toLowerCase() === name.toLowerCase());
-        if (existing) {
-          existing.name = name;
-          existing.phone = phone;
-          existing.balance = bal;
-        } else {
-          activeDebtorsList.push({
-            name: name,
-            phone: phone || '',
-            balance: bal,
-            limit: Math.max(5000, bal * 1.5),
-            last_repay: 'Just updated',
-            rating: 'LOW RISK'
-          });
-        }
-        saveStoredDebtors(activeDebtorsList);
-        closeModal('modalEditCustomer');
-        renderKhataTable(activeDebtorsList);
-        updatePosCustomerDropdown(activeDebtorsList);
-      }
-
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/khata/customer/update`, {
+        const resp = await fetch('/api/counter/khata/customer/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2567,13 +1949,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resp.ok) {
           closeModal('modalEditCustomer');
-          await loadLiveDashboardMetrics();
-        } else {
-          applyLocalCustomerSave();
+          loadLiveDashboardMetrics();
         }
       } catch (err) {
-        console.warn('Customer update note (autonomous save):', err);
-        applyLocalCustomerSave();
+        console.error('Error updating customer khata:', err);
       }
     });
   }
@@ -2584,17 +1963,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const origName = document.getElementById('editCustOriginalName').value.trim();
       if (!confirm(`Delete credit account for "${origName}"?`)) return;
 
-      function applyLocalCustomerDelete() {
-        activeDebtorsList = activeDebtorsList.filter(d => d.name !== origName);
-        saveStoredDebtors(activeDebtorsList);
-        closeModal('modalEditCustomer');
-        renderKhataTable(activeDebtorsList);
-        updatePosCustomerDropdown(activeDebtorsList);
-      }
-
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/khata/customer/delete`, {
+        const resp = await fetch('/api/counter/khata/customer/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2605,19 +1975,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resp.ok) {
           closeModal('modalEditCustomer');
-          await loadLiveDashboardMetrics();
-        } else {
-          applyLocalCustomerDelete();
+          loadLiveDashboardMetrics();
         }
       } catch (err) {
-        console.warn('Customer delete note (autonomous delete):', err);
-        applyLocalCustomerDelete();
+        console.error('Error deleting customer:', err);
       }
     });
   }
 
   // --- D. EDIT SUPPLIER INVOICE & PAYABLES ---
-  window.openEditInvoiceModal = function (number, supplier, amount, dueRaw, status) {
+  window.openEditInvoiceModal = function(number, supplier, amount, dueRaw, status) {
     const editSupp = document.getElementById('editInvSupplier');
     const editNum = document.getElementById('editInvNumber');
     const editAmt = document.getElementById('editInvAmount');
@@ -2651,34 +2018,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const due = document.getElementById('editInvDueDate').value;
       const status = document.getElementById('editInvStatus').value;
 
-      function applyLocalInvoiceSave() {
-        let existing = latestPayablesList.find(p => (origNum && p.invoice_number === origNum) || p.invoice_number === num);
-        if (existing) {
-          existing.invoice_number = num;
-          existing.supplier = supp;
-          existing.supplier_name = supp;
-          existing.amount = amt;
-          existing.due_date = due;
-          existing.status = status;
-        } else {
-          latestPayablesList.push({
-            invoice_number: num,
-            supplier: supp,
-            supplier_name: supp,
-            amount: amt,
-            due_date: due || '2026-11-05',
-            days_until_due: 7,
-            status: status
-          });
-        }
-        saveStoredPayables(latestPayablesList);
-        closeModal('modalEditInvoice');
-        loadLiveDashboardMetrics();
-      }
-
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(`${baseUrl}/api/counter/invoice/update`, {
+        const resp = await fetch('/api/counter/invoice/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2694,13 +2035,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (resp.ok) {
           closeModal('modalEditInvoice');
-          await loadLiveDashboardMetrics();
-        } else {
-          applyLocalInvoiceSave();
+          loadLiveDashboardMetrics();
         }
       } catch (err) {
-        console.warn('Invoice update note (autonomous save):', err);
-        applyLocalInvoiceSave();
+        console.error('Error updating invoice:', err);
       }
     });
   }
@@ -2710,144 +2048,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAddProductToolbar.addEventListener('click', () => window.openEditProductModal(null));
   }
 
-  // API Config Settings Listener
-  const btnConfigApiHeader = document.getElementById('btnConfigApiHeader');
-  if (btnConfigApiHeader) {
-    btnConfigApiHeader.addEventListener('click', () => {
-      const current = localStorage.getItem('sahayak_backend_url') || '';
-      const input = prompt("Set FastAPI Backend Server URL (e.g. https://your-backend.onrender.com or https://xxxx.ngrok-free.app).\nLeave blank for Autonomous Client-Side mode on Netlify:", current);
-      if (input !== null) {
-        if (input.trim()) {
-          localStorage.setItem('sahayak_backend_url', input.trim());
-          alert("✓ Backend API URL configured: " + input.trim());
-        } else {
-          localStorage.removeItem('sahayak_backend_url');
-          alert("✓ Switched to Autonomous Client-Side Mode (Optimized for Netlify)");
-        }
-        loadLiveDashboardMetrics();
-      }
-    });
-  }
-
-  // --- E. STORE SWITCHER & TELEGRAM LINK MODAL ---
-  const storeLiveBadge = document.getElementById('storeLiveBadge');
-  const modalStoreSwitcher = document.getElementById('modalStoreSwitcher');
-  const btnCloseStoreSwitcher = document.getElementById('btnCloseStoreSwitcher');
-  const switcherCurrentStoreName = document.getElementById('switcherCurrentStoreName');
-  const switcherCurrentStoreId = document.getElementById('switcherCurrentStoreId');
-  const switcherTelegramStatus = document.getElementById('switcherTelegramStatus');
-  const switcherStoresList = document.getElementById('switcherStoresList');
-  const switcherInputStoreId = document.getElementById('switcherInputStoreId');
-  const btnApplyStoreSwitch = document.getElementById('btnApplyStoreSwitch');
-  const switcherTgCmd = document.getElementById('switcherTgCmd');
-
-  function openStoreSwitcherModal() {
-    if (!modalStoreSwitcher) return;
-    modalStoreSwitcher.style.display = 'flex';
-
-    const bName = (merchantData && merchantData.business_name) || "Store Ledger Active";
-    const isTg = merchantData && merchantData.is_telegram_active;
-
-    if (switcherCurrentStoreName) switcherCurrentStoreName.textContent = bName;
-    if (switcherCurrentStoreId) switcherCurrentStoreId.textContent = `#${activeMerchantId}`;
-    if (switcherTgCmd) switcherTgCmd.textContent = `#${activeMerchantId}`;
-    if (switcherInputStoreId) switcherInputStoreId.value = activeMerchantId;
-
-    if (switcherTelegramStatus) {
-      if (isTg) {
-        switcherTelegramStatus.innerHTML = '<span style="color: #0088cc; font-weight: 700;">⚡ Telegram Connected</span>';
-      } else {
-        switcherTelegramStatus.innerHTML = '<span style="color: #e05624; font-weight: 700;">⚠️ Not Linked to Telegram</span>';
-      }
-    }
-
-    loadSwitcherStoresList();
-  }
-  window.openStoreSwitcherModal = openStoreSwitcherModal;
-
-  async function loadSwitcherStoresList() {
-    if (!switcherStoresList) return;
-    switcherStoresList.innerHTML = '<div style="padding: 12px; font-size: 0.85rem; color: var(--color-text-muted);">Loading registered stores...</div>';
-
-    let stores = [];
-    try {
-      const baseUrl = getApiBaseUrl();
-      const resp = await fetch(`${baseUrl}/api/v1/auth/merchants`);
-      if (resp.ok) {
-        const parsed = await safeReadJson(resp);
-        if (parsed && parsed.status === 'success' && parsed.merchants) {
-          stores = parsed.merchants;
-        }
-      }
-    } catch (e) {
-      console.warn('Stores list fetch note:', e);
-    }
-
-    // Default fallback stores if server unreachable
-    if (stores.length === 0) {
-      stores = [
-        { id: "M_MOHITH_6DWS", name: "Mohith's Kirana and General Store", phone: "+919845012345", is_telegram_active: true },
-        { id: "M_MOHITH_KIE2", name: "Mohith's Kirana & General Store", phone: "+918951391999", is_telegram_active: true },
-        { id: "M_MOHITH_A5AN", name: "Yashwanth's Kirana & General Store", phone: "+918951391967", is_telegram_active: false }
-      ];
-    }
-
-    switcherStoresList.innerHTML = '';
-    stores.forEach(st => {
-      const isCurrent = (st.id === activeMerchantId);
-      const row = document.createElement('div');
-      row.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border: 1px solid ${isCurrent ? 'rgba(27,131,84,0.4)' : 'var(--color-border)'}; background: ${isCurrent ? 'rgba(27,131,84,0.06)' : '#FFF'};`;
-      row.innerHTML = `
-        <div>
-          <div style="font-weight: 700; font-size: 0.88rem; color: var(--color-text-title);">
-            ${st.name || 'Retail Store'} ${isCurrent ? '<span style="font-size: 0.72rem; color: #1B8354; font-weight: 700; margin-left: 4px;">● ACTIVE</span>' : ''}
-          </div>
-          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
-            <span class="mono-tag" style="font-size: 0.72rem;">#${st.id}</span>
-            ${st.phone ? ` • ${st.phone}` : ''}
-            ${st.is_telegram_active ? ' • <span style="color: #0088cc; font-weight: 600;">⚡ Telegram Linked</span>' : ''}
-          </div>
-        </div>
-        <div>
-          ${isCurrent ?
-            '<span style="font-size: 0.8rem; font-weight: 700; color: #1B8354;">Selected</span>' :
-            `<button type="button" class="btn-action-sm" style="padding: 4px 10px; font-size: 0.75rem;" onclick="switchToStore('${st.id}')">Switch ➔</button>`
-          }
-        </div>
-      `;
-      switcherStoresList.appendChild(row);
-    });
-  }
-
-  function switchToStore(targetId) {
-    if (!targetId || !targetId.trim()) return;
-    const clean = targetId.trim().toUpperCase();
-    try {
-      localStorage.setItem('sahayak_merchant', JSON.stringify({ merchant_id: clean }));
-    } catch (e) { }
-
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('merchant_id', clean);
-    window.location.href = newUrl.toString();
-  }
-  window.switchToStore = switchToStore;
-
-  if (storeLiveBadge) {
-    storeLiveBadge.addEventListener('click', openStoreSwitcherModal);
-  }
-  if (btnCloseStoreSwitcher) {
-    btnCloseStoreSwitcher.addEventListener('click', () => {
-      if (modalStoreSwitcher) modalStoreSwitcher.style.display = 'none';
-    });
-  }
-  if (btnApplyStoreSwitch) {
-    btnApplyStoreSwitch.addEventListener('click', () => {
-      const val = switcherInputStoreId ? switcherInputStoreId.value : '';
-      if (val) switchToStore(val);
-    });
-  }
-
-  // 16. Initial Invocations & Real-Time Sync Polling
+    // 16. Initial Invocations & Real-Time Sync Polling
   renderCatalog();
   renderCart();
   loadLiveDashboardMetrics();
