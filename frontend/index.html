@@ -10,6 +10,15 @@
   <!-- Design System & Styles -->
   <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/style.css">
+
+  <!-- Supabase OAuth Callback Auto-Forwarder -->
+  <script>
+    if (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('error='))) {
+      window.location.replace('/login.html' + window.location.hash);
+    } else if (window.location.search && (window.location.search.includes('code=') || window.location.search.includes('error='))) {
+      window.location.replace('/login.html' + window.location.search);
+    }
+  </script>
 </head>
 <body>
 

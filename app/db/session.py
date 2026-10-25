@@ -41,9 +41,10 @@ def get_rls_session(merchant_id: str):
     """
     session = SessionLocal()
     try:
-        # Switch to non-bypass role and set session merchant identity in a single round-trip
+        # Switch to non-bypass role and set session merchant identity (split for psycopg 3 prepared statement support)
+        session.execute(text("SET LOCAL ROLE authenticated;"))
         session.execute(
-            text("SET LOCAL ROLE authenticated; SELECT set_config('app.current_merchant_id', :m_id, true);"),
+            text("SELECT set_config('app.current_merchant_id', :m_id, true);"),
             {"m_id": merchant_id}
         )
         yield session
