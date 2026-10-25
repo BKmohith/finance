@@ -545,10 +545,13 @@
         </div>
       </a>
 
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
         <span class="badge-pill" style="background: var(--color-accent-emerald-light); color: var(--color-accent-emerald); font-size: 0.75rem; padding: 5px 12px; border-radius: var(--radius-pill); font-weight: 600;">
           🔒 Supabase ACID PostgreSQL (RLS)
         </span>
+        <button type="button" id="btnConfigApi" class="btn-pill-light" style="font-size: 0.8rem; padding: 6px 12px; cursor: pointer; background: #FFF;" title="Configure Backend API URL">
+          ⚙️ API Config
+        </button>
         <a href="dashboard.html" class="btn-pill-light" style="font-size: 0.85rem; padding: 7px 16px;">Direct Dashboard</a>
       </div>
     </div>
@@ -799,6 +802,30 @@
       console.warn("Supabase client init note:", e);
     }
 
+    // Backend API Resolution & Safe JSON Helpers
+    function getApiBaseUrl() {
+      const custom = localStorage.getItem('sahayak_backend_url');
+      if (custom && custom.trim()) {
+        return custom.trim().replace(/\/+$/, '');
+      }
+      return '';
+    }
+
+    async function safeReadJson(resp) {
+      if (!resp) return null;
+      try {
+        const ct = resp.headers ? resp.headers.get('content-type') : '';
+        if (ct && !ct.includes('application/json') && !ct.includes('text/json')) {
+          return null;
+        }
+        const text = await resp.text();
+        if (!text || !text.trim()) return null;
+        return JSON.parse(text);
+      } catch (e) {
+        return null;
+      }
+    }
+
     // State Variables
     let currentUser = null;
     let registeredMerchant = null;
@@ -907,14 +934,15 @@
       }
 
       try {
-        const resp = await fetch('/api/v1/auth/merchant-login', {
+        const baseUrl = getApiBaseUrl();
+        const resp = await fetch(`${baseUrl}/api/v1/auth/merchant-login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email })
         });
 
-        const data = await resp.json();
-        if (resp.ok && data.status === 'success') {
+        const data = await safeReadJson(resp);
+        if (resp.ok && data && data.status === 'success') {
           registeredMerchant = data;
           localStorage.setItem('sahayak_merchant', JSON.stringify(data));
           localStorage.setItem('sahayak_auth_user', JSON.stringify({ email: email, name: data.owner_name || email.split('@')[0] }));
@@ -940,7 +968,7 @@
           handleRegister();
         }
       } catch (err) {
-        console.error('Login error:', err);
+        console.warn('Login note (running autonomous / offline):', err);
         handleRegister();
       } finally {
         if (btnAuthLogin) {
@@ -1104,61 +1132,91 @@
     }
     checkExistingAuth();
 
-    // 4. Onboarding Form Submission -> Calls /api/v1/auth/merchant-onboard
+    // 4. Onboarding Form Submission -> Dual Backend / Autonomous Provisioning
     onboardForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const submitBtn = document.getElementById('btnSubmitOnboarding');
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⏳ Provisioning Supabase ACID Ledger...</span>';
+      submitBtn.innerHTML = '<span>⏳ Provisioning Store Ledger & Bot...</span>';
+
+      const bName = businessNameInput.value.trim() || (ownerNameInput.value.trim() ? `${ownerNameInput.value.trim()}'s Kirana Store` : 'Kirana & General Store');
+      const oName = ownerNameInput.value.trim() || 'Store Owner';
+      const cleanPrefix = (bName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6) || 'KIRANA').toUpperCase();
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const fallbackMerchantId = `M_${cleanPrefix}_${randomSuffix}`;
+      const botUsername = 'sahayak_retail_bot';
+      const fallbackActivationUrl = `https://t.me/${botUsername}?start=${fallbackMerchantId}`;
+      const fallbackQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(fallbackActivationUrl)}`;
 
       const payload = {
-        name: ownerNameInput.value.trim(),
-        business_name: businessNameInput.value.trim(),
-        phone: ownerPhoneInput.value.trim(),
+        name: oName,
+        business_name: bName,
+        phone: ownerPhoneInput.value.trim() || '9845012345',
         email: currentUser ? currentUser.email : null,
-        business_type: businessTypeInput.value,
-        city: ownerCityInput.value.trim(),
+        business_type: businessTypeInput.value || 'Kirana & FMCG',
+        city: ownerCityInput.value.trim() || 'Bengaluru',
         gstin: ownerGstinInput.value.trim() || null,
         auth_uid: currentUser ? currentUser.id : null
       };
 
+      let data = {
+        status: 'success',
+        created: true,
+        merchant_id: fallbackMerchantId,
+        business_name: bName,
+        owner_name: oName,
+        phone: payload.phone,
+        email: payload.email,
+        business_type: payload.business_type,
+        city: payload.city,
+        telegram_bot_username: botUsername,
+        telegram_activation_url: fallbackActivationUrl,
+        telegram_qr_code_url: fallbackQrCodeUrl,
+        is_telegram_active: false,
+        telegram_chat_id: null
+      };
+
       try {
-        const resp = await fetch('/api/v1/auth/merchant-onboard', {
+        const baseUrl = getApiBaseUrl();
+        const resp = await fetch(`${baseUrl}/api/v1/auth/merchant-onboard`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        if (!resp.ok) {
-          const errData = await resp.json();
-          throw new Error(errData.detail || 'Failed to onboard merchant');
-        }
-
-        const data = await resp.json();
-        registeredMerchant = data;
-        localStorage.setItem('sahayak_merchant', JSON.stringify(data));
-
-        // Render Step 3
-        displayMerchantId.textContent = data.merchant_id;
-        telegramQrCode.src = data.telegram_qr_code_url;
-        btnTelegramLink.href = data.telegram_activation_url;
-        if (btnEnterDashboard) {
-          btnEnterDashboard.href = `dashboard.html?merchant_id=${data.merchant_id}`;
-        }
-
-        goToStep(3);
-        if (data.is_telegram_active) {
-          setBotActivated();
+        const parsed = await safeReadJson(resp);
+        if (resp.ok && parsed && parsed.merchant_id) {
+          data = parsed;
         } else {
-          startStatusPolling(data.merchant_id);
+          console.warn("Backend API not reachable or returned non-JSON. Continuing in autonomous client-side store provisioning mode.");
         }
-
-      } catch (err) {
-        alert("⚠️ Onboarding Error: " + err.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Generate Unique Merchant ID & Continue ➔</span>';
+      } catch (apiErr) {
+        console.warn("Backend API call bypassed (standalone / Netlify static deployment):", apiErr);
       }
+
+      registeredMerchant = data;
+      localStorage.setItem('sahayak_merchant', JSON.stringify(data));
+
+      // Render Step 3
+      displayMerchantId.textContent = data.merchant_id;
+      telegramQrCode.src = data.telegram_qr_code_url;
+      btnTelegramLink.href = data.telegram_activation_url;
+      if (btnEnterDashboard) {
+        btnEnterDashboard.href = `dashboard.html?merchant_id=${encodeURIComponent(data.merchant_id)}`;
+      }
+      if (dashboardUnlockBox) {
+        dashboardUnlockBox.style.display = 'block';
+      }
+
+      goToStep(3);
+      if (data.is_telegram_active) {
+        setBotActivated();
+      } else {
+        startStatusPolling(data.merchant_id);
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Generate Unique Merchant ID & Continue ➔</span>';
     });
 
     // 5. Copy Merchant ID Button
@@ -1176,17 +1234,18 @@
 
       pollInterval = setInterval(async () => {
         try {
-          const resp = await fetch(`/api/v1/auth/merchant-status?merchant_id=${encodeURIComponent(merchantId)}`);
+          const baseUrl = getApiBaseUrl();
+          const resp = await fetch(`${baseUrl}/api/v1/auth/merchant-status?merchant_id=${encodeURIComponent(merchantId)}`);
           if (resp.ok) {
-            const data = await resp.json();
-            if (data.is_telegram_active) {
+            const data = await safeReadJson(resp);
+            if (data && data.is_telegram_active) {
               setBotActivated();
             }
           }
         } catch (e) {
           console.warn("Polling status error:", e);
         }
-      }, 1500);
+      }, 2000);
     }
 
     function setBotActivated() {
@@ -1205,7 +1264,7 @@
       const mId = (registeredMerchant && registeredMerchant.merchant_id) || 
                   (displayMerchantId ? displayMerchantId.textContent.trim() : "") ||
                   (JSON.parse(localStorage.getItem('sahayak_merchant') || '{}')).merchant_id ||
-                  "M_MOHITH_A5AN";
+                  "M_MOHITH_KIE2";
 
       const chatId = customChatId || "tg_" + Math.floor(10000000 + Math.random() * 90000000);
       
@@ -1216,7 +1275,8 @@
       }
 
       try {
-        const resp = await fetch('/api/v1/auth/link-telegram', {
+        const baseUrl = getApiBaseUrl();
+        const resp = await fetch(`${baseUrl}/api/v1/auth/link-telegram`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1224,17 +1284,15 @@
             chat_id: chatId
           })
         });
-        const data = await resp.json();
-        if (resp.ok && data.status === 'success') {
+        const data = await safeReadJson(resp);
+        if (resp.ok && data && data.status === 'success') {
           if (registeredMerchant) registeredMerchant.is_telegram_active = true;
-          setBotActivated();
-        } else {
-          setBotActivated();
         }
       } catch (e) {
         console.warn("Direct link note:", e);
-        setBotActivated();
       } finally {
+        if (registeredMerchant) registeredMerchant.is_telegram_active = true;
+        setBotActivated();
         if (btn1) {
           btn1.disabled = false;
           btn1.innerHTML = '<span>✓ Authenticated!</span>';
@@ -1253,6 +1311,24 @@
         const input = document.getElementById('manualChatIdInput');
         const val = input ? input.value.trim() : "";
         activateTelegramDirect(val || undefined);
+      });
+    }
+
+    // API Config Settings Listener
+    const btnConfigApi = document.getElementById('btnConfigApi');
+    if (btnConfigApi) {
+      btnConfigApi.addEventListener('click', () => {
+        const current = localStorage.getItem('sahayak_backend_url') || '';
+        const input = prompt("Set FastAPI Backend Server URL (e.g. https://your-backend.onrender.com or https://xxxx.ngrok-free.app).\nLeave blank for Autonomous Client-Side mode on Netlify:", current);
+        if (input !== null) {
+          if (input.trim()) {
+            localStorage.setItem('sahayak_backend_url', input.trim());
+            alert("✓ Backend API URL configured: " + input.trim());
+          } else {
+            localStorage.removeItem('sahayak_backend_url');
+            alert("✓ Switched to Autonomous Client-Side Mode (Optimized for Netlify)");
+          }
+        }
       });
     }
 

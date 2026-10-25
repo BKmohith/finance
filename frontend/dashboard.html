@@ -55,6 +55,9 @@
 
       <!-- Action Buttons -->
       <div class="dash-actions-wrap">
+        <button type="button" id="btnConfigApiHeader" class="btn-pill-light" style="font-size: 0.8rem; padding: 6px 12px; cursor: pointer; background: #FFF;" title="Configure Backend API URL">
+          ⚙️ API Config
+        </button>
         <a href="login.html" class="btn-pill-light" title="Merchant Account & Settings">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             style="margin-right: 4px;">
@@ -373,15 +376,26 @@
         <div class="forecast-card-grid">
 
           <div class="forecast-main-card">
-            <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--color-text-title);">14-Day Predictive Cash-Flow
-              Trajectory</h3>
-            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px;">
-              Simulating cash inflow velocity vs upcoming distributor due dates to prevent cheque bounces.
-            </p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--color-text-title); margin: 0;">15-Day Hyper-Local Cash-Flow Trajectory</h3>
+                <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px; margin-bottom: 0;">
+                  3-Day &amp; 6-Day sales momentum blended with Gemini-retrieved hyper-local calendar factors (festivals, salary cycles, vendor delivery cliffs).
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span id="forecastLocationBadge" class="mono-tag" style="background: rgba(27,131,84,0.1); color: var(--color-accent-emerald); font-size: 0.78rem; font-weight: 600;">
+                  📍 Bengaluru, KA
+                </span>
+                <span id="forecastVelocityPill" class="mono-tag" style="background: rgba(121,82,179,0.1); color: var(--color-accent-purple); font-size: 0.78rem; font-weight: 600;">
+                  ⚡ Velocity: 3d/6d
+                </span>
+              </div>
+            </div>
 
             <!-- Dynamic SVG Cash Curve Visualization -->
-            <div id="forecastSvgContainer" class="chart-svg-container" style="min-height: 220px;">
-              <!-- Dynamically populated by render14DayForecast() -->
+            <div id="forecastSvgContainer" class="chart-svg-container" style="min-height: 220px; margin-top: 14px;">
+              <!-- Dynamically populated by renderForecastCurve() -->
             </div>
 
             <!-- What-If Simulation Controls -->
@@ -400,6 +414,36 @@
                 <span>10% (Slow Collections)</span>
                 <span>60% (Expected Velocity)</span>
                 <span>100% (Full Clearance)</span>
+              </div>
+            </div>
+
+            <!-- 15-Day Hyper-Local Calendar & Demand Multipliers Table -->
+            <div style="margin-top: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-title); margin: 0;">
+                  📅 15-Day Hyper-Local Demand Index &amp; Calendar Events
+                </h4>
+                <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+                  Live Gemini Local Factor Multipliers
+                </span>
+              </div>
+              <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-item);">
+                <table class="khata-table" style="margin: 0; width: 100%;">
+                  <thead>
+                    <tr>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Index</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Date &amp; Day</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Demand Index</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Hyper-Local Event / Factor</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Inflow</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Outflow</th>
+                      <th style="padding: 10px 12px; font-size: 0.78rem;">Net Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="forecastTableBody">
+                    <!-- Populated dynamically by renderForecastTrajectoryTable() -->
+                  </tbody>
+                </table>
               </div>
             </div>
 
