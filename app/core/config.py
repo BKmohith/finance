@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     NOTIFICATION_CHANNEL: str = "telegram"  # "telegram" or "whatsapp"
 
     # --- Telegram Bot API ---
-    TELEGRAM_BOT_TOKEN: str = "8205381745:AAFqdHI0ZmzfOArZ5NIvJG4ALEUimitGLfo"
+    TELEGRAM_BOT_TOKEN: str = "8205381745:AAGSFZXRFP2hDFd_MJSM5-JBaO279G_iA3w"
     TELEGRAM_API_BASE: str = "https://api.telegram.org"
     ENABLE_TELEGRAM_POLLING: bool = True
 
@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     META_APP_SECRET: str = "mock_meta_app_secret_dev"
     WHATSAPP_VERIFY_TOKEN: str = "sahayak_hackathon_token_2026"
     META_GRAPH_API_VERSION: str = "v19.0"
+
+    # --- Sarvam AI Speech Engine ---
+    SARVAM_API_KEY: Optional[str] = "sk_apba05ii_xikxfuEvwXbot88r0t4CLxRF"
+
 
     # --- Cache, Deduplication & Queue ---
     REDIS_URL: str = "redis://localhost:6379/0"

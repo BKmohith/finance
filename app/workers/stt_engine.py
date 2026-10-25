@@ -1,6 +1,6 @@
 """
 app/workers/stt_engine.py
-Vernacular Speech-to-Text Engine for Indian Retail Kirana Stores.
+Vernacular Speech-to-Text Engine for Indian Small Businesses.
 Laptop 3 Domain (Perception & STT).
 
 Connects to Sarvam AI (Saaras model) to transcribe and translate:
@@ -156,7 +156,7 @@ class STTEngine:
                 mime_type = "audio/mp3"
 
             prompt = (
-                "You are an Indian retail Kirana audio transcriber. "
+                "You are an Indian small business audio transcriber. "
                 "Transcribe this audio faithfully. It may be in Kannada, Hindi, or Hinglish. "
                 "Return ONLY the plain text transcript."
             )

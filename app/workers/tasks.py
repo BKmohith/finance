@@ -15,7 +15,7 @@ from app.workers.contracts import (
     PriceHikeAlert,
 )
 from app.workers.preprocessor import preprocess_bill_image
-from app.workers.gemini_extractor import extract_invoice_from_image
+from app.workers.gemini_extractor import extract_invoice_from_image, NonInvoiceDocumentError
 from app.workers.guardrails import validate_invoice_arithmetic
 
 logger = logging.getLogger(__name__)
@@ -165,6 +165,23 @@ def process_invoice_task(
             "alerts_count": len(alerts) if alerts else 0
         }
 
+    except NonInvoiceDocumentError as nie:
+        logger.warning(
+            "process_invoice_task rejected non-invoice media for merchant=%s: %s",
+            merchant_id, nie
+        )
+        return {
+            "status": "REJECTED_NON_INVOICE",
+            "merchant_id": merchant_id,
+            "reason": str(nie),
+            "invoice_number": None,
+            "grand_total": 0.0,
+            "items_count": 0,
+            "confidence_score": 0.0,
+            "saved_invoice_id": None,
+            "margin_alerts": [],
+            "alerts_count": 0
+        }
     except Exception as exc:
         logger.error("Error executing process_invoice_task: %s", exc, exc_info=True)
         # In production Celery, can retry with self.retry(exc=exc)

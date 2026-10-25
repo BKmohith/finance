@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak (सहायक) — Kirana Counter POS & Predictive Cash-Flow Dashboard</title>
+  <meta name="description" content="Autonomous Kirana Counter POS and Predictive Cash-Flow Intelligence Dashboard for 30 Million Indian Retailers. Problem Statement F-03.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='2' y='8' width='3' height='8' rx='1.5' fill='%23C9972E'/><rect x='7' y='4' width='3' height='16' rx='1.5' fill='%23181513'/><rect x='12' y='2' width='3' height='20' rx='1.5' fill='%23C9972E'/><rect x='17' y='6' width='3' height='12' rx='1.5' fill='%23181513'/><rect x='22' y='9' width='3' height='6' rx='1.5' fill='%231B8354'/></svg>">
+  
+  <!-- Design System & Dashboard Styles -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="dashboard-page">
+
+  <!-- ====================================================================
+       TOP DASHBOARD HEADER
+       ==================================================================== -->
+  <header class="dash-header">
+    <div class="container dash-header-inner">
+      
+      <!-- Brand Logo Button (Matching Reference Logo) -->
+      <a href="index.html" class="brand-logo-btn" aria-label="Sahayak Home" title="Return to Sahayak Home">
+        <div class="brand-waveform-icon" aria-hidden="true">
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+        </div>
+        <div class="brand-title-box">
+          <span class="brand-name">sahayak</span>
+          <span class="brand-subtext">सहायक • COPILOT</span>
+        </div>
+      </a>
+
+      <!-- Live Store Identity Badge & Clock -->
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="store-live-badge" id="storeLiveBadge">
+          <span class="live-pulse-dot"></span>
+          <span id="storeIdentityText">Store #KN-560001 • Ramesh Kirana (Malleshwaram)</span>
+        </div>
+        <!-- Placed in place of pm IST to update Counter Inflow & Distributor Payables -->
+        <button type="button" id="btnEditMetricsHeader" class="btn-header-metrics-edit" title="Update Today's Counter Inflow & Distributor Payables">
+          <span class="edit-pen">✏️</span>
+          <span>Edit</span>
+        </button>
+        <span id="liveClockTag" class="live-clock-tag" style="display: none;">--:--:-- IST</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="dash-actions-wrap">
+        <a href="login.html" class="btn-pill-light" title="Merchant Account & Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span id="navMerchantIdTag">Store Account</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ====================================================================
+       MAIN DASHBOARD WORKSPACE
+       ==================================================================== -->
+  <main class="dash-main">
+    <div class="container">
+
+      <!-- ==================================================================
+           1. TOP KPI METRIC STRIP (ACID INFLOW, UDHAAR, PAYABLES, SHIELD)
+           ================================================================== -->
+      <section class="kpi-grid" aria-label="Financial Summary Cards">
+        
+        <!-- KPI 1: Today's Inflow -->
+        <article class="kpi-card kpi-emerald">
+          <div class="kpi-label-row">
+            <span class="kpi-title">Today's Counter Inflow</span>
+            <div class="kpi-icon-pill" style="background: var(--color-accent-emerald-light); color: var(--color-accent-emerald);">💰</div>
+          </div>
+          <div id="kpiTodayInflow" class="kpi-val-main">₹0.00</div>
+          <div class="kpi-subtext" id="kpiInflowSub">
+            <span id="kpiTxnCount">0 Sales</span> • ₹0.00 Cash / ₹0.00 UPI
+          </div>
+        </article>
+
+        <!-- KPI 2: Customer Udhaar -->
+        <article class="kpi-card kpi-gold">
+          <div class="kpi-label-row">
+            <span class="kpi-title">Customer Udhaar (Khata)</span>
+            <div class="kpi-icon-pill" style="background: var(--color-accent-gold-light); color: var(--color-accent-gold);">📒</div>
+          </div>
+          <div id="kpiKhataBalance" class="kpi-val-main">₹0.00</div>
+          <div class="kpi-subtext" id="kpiKhataSub">
+            0 Active debtors in ledger
+          </div>
+        </article>
+
+        <!-- KPI 3: Supplier Payables -->
+        <article class="kpi-card kpi-purple">
+          <div class="kpi-label-row">
+            <span class="kpi-title">Distributor Payables</span>
+            <div class="kpi-icon-pill" style="background: var(--color-accent-purple-light); color: var(--color-accent-purple);">📦</div>
+          </div>
+          <div id="kpiPayablesBalance" class="kpi-val-main">₹0.00</div>
+          <div class="kpi-subtext" id="kpiPayablesSub">
+            0 Upcoming supplier bills
+          </div>
+        </article>
+
+        <!-- KPI 4: Margin-Guard Shield -->
+        <article class="kpi-card kpi-coral">
+          <div class="kpi-label-row">
+            <span class="kpi-title">Margin-Guard Shield</span>
+            <div class="kpi-icon-pill" style="background: var(--color-accent-coral-light); color: var(--color-accent-coral);">🛡️</div>
+          </div>
+          <div id="kpiMarginShield" class="kpi-val-main">0 Protected</div>
+          <div class="kpi-subtext" id="kpiMarginSub">
+            0 Wholesale price spike alerts
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ==================================================================
+           2. NAVIGATION TABS
+           ================================================================== -->
+      <nav class="dash-tabs-bar" aria-label="Dashboard views">
+        <button type="button" class="dash-tab-btn active" data-tab="tabCounter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>Rapid Counter POS (Register)</span>
+        </button>
+
+        <button type="button" class="dash-tab-btn" data-tab="tabKhata">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Customer Udhaar Khata</span>
+          <span class="tab-count-badge" id="tabKhataCountBadge">0</span>
+        </button>
+
+        <button type="button" class="dash-tab-btn" data-tab="tabForecast">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+          <span>14-Day Cash-Flow Simulator</span>
+        </button>
+
+        <button type="button" class="dash-tab-btn" data-tab="tabMarginGuard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Margin-Guard &amp; Dead Capital</span>
+          <span class="tab-count-badge" id="tabMarginBadge" style="background: var(--color-accent-coral-light); color: var(--color-accent-coral);">0</span>
+        </button>
+      </nav>
+
+      <!-- ==================================================================
+           3. TAB PANEL 1: RAPID COUNTER POS (THE CORE WORKSPACE)
+           ================================================================== -->
+      <section id="tabCounter" class="tab-panel active">
+        <div class="pos-layout-grid">
+          
+          <!-- Left: Catalog & Fast Entry -->
+          <div class="pos-catalog-panel">
+            
+            <!-- Quick Cash Presets Strip -->
+            <div class="quick-cash-bar">
+              <span class="quick-cash-title">Quick Presets:</span>
+              <button type="button" class="quick-cash-pill" onclick="addQuickCash(50)">+₹50</button>
+              <button type="button" class="quick-cash-pill" onclick="addQuickCash(100)">+₹100</button>
+              <button type="button" class="quick-cash-pill" onclick="addQuickCash(200)">+₹200</button>
+              <button type="button" class="quick-cash-pill" onclick="addQuickCash(500)">+₹500</button>
+              <button type="button" class="quick-cash-pill" onclick="addQuickCash(1000)">+₹1,000</button>
+            </div>
+
+            <!-- Search Input -->
+            <div class="pos-search-box">
+              <svg class="pos-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="posSearchInput" class="pos-search-input" placeholder="Search item by name, barcode, or brand (e.g. Atta, Oil, Salt)...">
+            </div>
+
+            <!-- Category Chips -->
+            <div class="category-chips-row">
+              <button type="button" class="cat-chip active" data-cat="all">All Top Items</button>
+              <button type="button" class="cat-chip" data-cat="oils">Edible Oils</button>
+              <button type="button" class="cat-chip" data-cat="staples">Atta, Rice & Dal</button>
+              <button type="button" class="cat-chip" data-cat="dairy">Fresh Dairy</button>
+              <button type="button" class="cat-chip" data-cat="snacks">Biscuits & Snacks</button>
+            </div>
+
+            <!-- Shelf Catalog Actions Toolbar -->
+            <div class="catalog-action-strip" style="display: flex; gap: 8px; margin: 12px 0; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" id="btnAddProductToolbar" class="btn-pill-dark" style="font-size: 0.8rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 5px;">
+                  <span>+</span> <span>Add Product to Shelf</span>
+                </button>
+              </div>
+              <button type="button" id="btnClearStockToolbar" class="btn-action-sm" style="font-size: 0.72rem; color: var(--color-accent-coral); border: 1px solid rgba(224, 86, 36, 0.25); background: rgba(224, 86, 36, 0.05); padding: 5px 9px;" title="Reset active merchant shelf stock to 0">
+                Reset Shelf to 0
+              </button>
+            </div>
+
+            <!-- Dynamic Product Grid -->
+            <div id="productItemsGrid" class="product-items-grid"></div>
+
+          </div>
+
+          <!-- Right: Register / Cart Panel -->
+          <div class="pos-register-panel">
+            
+            <div class="register-header">
+              <div class="register-title-box">
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--color-text-title);">Active Bill</h3>
+                <span id="billNumberTag" class="bill-number-tag">#KN-9042</span>
+              </div>
+              <button type="button" id="clearCartBtn" class="cart-clear-btn">Clear Cart</button>
+            </div>
+
+            <!-- Cart Items Container -->
+            <div id="cartItemsContainer" class="cart-items-container"></div>
+
+            <!-- Payment Mode Selector -->
+            <div class="payment-selector-wrap">
+              <span class="pay-selector-title">Select Inbound Payment Channel:</span>
+              <div class="pay-modes-grid">
+                
+                <button type="button" class="pay-mode-btn active" data-mode="paytm_upi">
+                  <span class="pay-icon">⚡</span>
+                  <span>Paytm UPI</span>
+                </button>
+
+                <button type="button" class="pay-mode-btn" data-mode="cash">
+                  <span class="pay-icon">💵</span>
+                  <span>Counter Cash</span>
+                </button>
+
+                <button type="button" class="pay-mode-btn" data-mode="customer_khata">
+                  <span class="pay-icon">📒</span>
+                  <span>Udhaar Khata</span>
+                </button>
+
+              </div>
+
+              <!-- Customer Picker (Revealed when Udhaar is chosen) -->
+              <div id="customerKhataPicker" class="customer-khata-picker">
+                <label class="khata-select-label" for="khataCustomerSelect">Select Credit Customer Account:</label>
+                <select id="khataCustomerSelect" class="khata-select-input">
+                  <option value="">-- Select Active Customer Account --</option>
+                  <option value="__NEW__">+ Enter New Customer Name &amp; Phone...</option>
+                </select>
+                <div id="newCustomerInlineFields" style="display: none; margin-top: 10px; gap: 8px;">
+                  <input type="text" id="inlineCustName" placeholder="Customer Name (e.g. Ramesh)" style="flex: 1; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.85rem;" />
+                  <input type="tel" id="inlineCustPhone" placeholder="Mobile (e.g. 9845012345)" style="flex: 1; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.85rem;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Totals Box -->
+            <div class="bill-summary-box">
+              <div class="summary-row">
+                <span>Cart Subtotal</span>
+                <span id="cartSubtotal" class="mono-tag">₹0.00</span>
+              </div>
+              <div class="summary-row">
+                <span>GST (Estimated 5%)</span>
+                <span id="cartTax" class="mono-tag">₹0.00</span>
+              </div>
+              <div class="summary-row grand-total">
+                <span class="grand-total-label">Grand Total</span>
+                <span id="cartGrandTotal" class="grand-total-val">₹0</span>
+              </div>
+            </div>
+
+            <!-- Checkout Action Button -->
+            <button type="button" id="checkoutBtn" class="checkout-btn" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Complete Sale & Deplete Stock</span>
+            </button>
+
+            <!-- System 1 Tag -->
+            <div class="pos-system-tag">
+              <span style="color: var(--color-accent-emerald);">●</span>
+              <span>System 1 Router &lt;38ms • Strict ACID Double-Entry Commit</span>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           4. TAB PANEL 2: CUSTOMER UDHAAR KHATA (CREDIT LEDGER)
+           ================================================================== -->
+      <section id="tabKhata" class="tab-panel">
+        <div class="khata-table-card">
+          
+          <div class="table-toolbar">
+            <div>
+              <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--color-text-title);">Customer Credit Accounts (Udhaar Khata)</h3>
+              <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px;">
+                Verified customer receivables with automated Kannada / Hindi WhatsApp receipts and double-entry SQL ledger locks.
+              </p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn-pill-light" onclick="exportKhataCSV()">
+                Export Khata CSV
+              </button>
+              <button type="button" id="btnOpenNewCustomerModal" class="btn-pill-dark">
+                + New Customer Account
+              </button>
+            </div>
+          </div>
+
+          <div class="custom-table-wrap">
+            <table class="custom-data-table">
+              <thead>
+                <tr>
+                  <th>Customer Name &amp; Phone</th>
+                  <th>Outstanding Credit</th>
+                  <th>Credit Limit</th>
+                  <th>Last Repayment</th>
+                  <th>Risk Rating</th>
+                  <th>Automated Action</th>
+                </tr>
+              </thead>
+              <tbody id="khataTableBody">
+                <!-- Dynamically loaded from /api/v1/auth/metrics -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           5. TAB PANEL 3: 14-DAY PREDICTIVE CASH-FLOW SIMULATOR (AGENT 5)
+           ================================================================== -->
+      <section id="tabForecast" class="tab-panel">
+        <div class="forecast-card-grid">
+          
+          <div class="forecast-main-card">
+            <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--color-text-title);">14-Day Predictive Cash-Flow Trajectory</h3>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px;">
+              Simulating cash inflow velocity vs upcoming distributor due dates to prevent cheque bounces.
+            </p>
+
+            <!-- Dynamic SVG Cash Curve Visualization -->
+            <div id="forecastSvgContainer" class="chart-svg-container" style="min-height: 220px;">
+              <!-- Dynamically populated by render14DayForecast() -->
+            </div>
+
+            <!-- What-If Simulation Controls -->
+            <div style="background: #FAF7F2; border-radius: var(--radius-item); padding: 18px; margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-title);">
+                  Interactive What-If: Customer Udhaar Recovery Rate
+                </span>
+                <span id="simRecoveryVal" class="mono-tag" style="font-weight: 700; color: var(--color-accent-purple);">60%</span>
+              </div>
+              <input type="range" id="simUdhaarRecovery" class="custom-range" min="10" max="100" step="5" value="60" style="width: 100%;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--color-text-muted); margin-top: 4px;">
+                <span>10% (Slow Collections)</span>
+                <span>60% (Expected Velocity)</span>
+                <span>100% (Full Clearance)</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Forecast Summary Sidebar -->
+          <div class="kpi-card" style="justify-content: flex-start; gap: 16px;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--color-text-title);">14-Day Trajectory Health</h4>
+            
+            <div style="background: #FAF7F2; padding: 14px; border-radius: var(--radius-item);">
+              <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase;">Forecasted Day 14 Net Cash</div>
+              <div id="simDay14Cash" style="font-family: var(--font-serif); font-size: 2rem; color: var(--color-accent-emerald); font-weight: 600; margin-top: 4px;">
+                ₹0
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-muted);">Liquidity Recommendation:</span>
+              <div id="simRunwayBadge" class="status-pill-ok" style="padding: 10px 14px; font-size: 0.85rem;">
+                Calculating trajectory...
+              </div>
+              <p id="simForecastInsight" style="font-size: 0.8rem; color: var(--color-text-body); line-height: 1.4; margin-top: 4px;">
+                Analyzing counter velocity and supplier cheques...
+              </p>
+            </div>
+
+            <button type="button" class="btn-pill-dark" style="margin-top: auto;" onclick="alert('Scheduling WhatsApp 10:15 PM Closing Storyteller Audio Dispatch...')">
+              🎙️ Schedule 10:15 PM Audio Summary
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           6. TAB PANEL 4: MARGIN-GUARD & DEAD CAPITAL HUNTER (AGENTS 3 & 4)
+           ================================================================== -->
+      <section id="tabMarginGuard" class="tab-panel">
+        <div class="margin-grid-layout">
+          
+          <!-- Margin Spikes Column -->
+          <div class="khata-table-card">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-title); margin-bottom: 6px;">
+              Wholesale Price Spike Shield (Agent 3)
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 20px;">
+              Automatically calculated from supplier rate histories. Prevents silent margin erosion.
+            </p>
+
+            <div id="marginAlertsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamically populated by renderMarginGuard() -->
+            </div>
+          </div>
+
+          <!-- Dead-Capital Hunter Column -->
+          <div class="khata-table-card">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-title); margin-bottom: 6px;">
+              FIFO Dead-Capital Hunter (Agent 4)
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 20px;">
+              Flags stagnant batches tying up working capital before expiry.
+            </p>
+
+            <div id="deadCapitalContainer" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamically populated by renderMarginGuard() -->
+            </div>
+          </div>
+
+          <!-- Supplier Invoices & Payables Column (With Full Edit Capability) -->
+          <div class="khata-table-card">
+            <div style="margin-bottom: 6px;">
+              <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-title);">
+                Supplier Invoices &amp; Payables (Agent 2)
+              </h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 20px;">
+              Upcoming distributor payment cheques and wholesale liabilities. Tap ✏️ Edit to modify due dates or invoice amounts.
+            </p>
+
+            <div id="supplierPayablesContainer" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamically populated by renderMarginGuard() -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ====================================================================
+       INTERACTIVE SALE CONFIRMATION / RECEIPT MODAL
+       ==================================================================== -->
+  <div id="saleSuccessModal" class="sale-toast-overlay" role="dialog" aria-modal="true">
+    <div class="sale-success-card">
+      
+      <div class="toast-chime-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+
+      <h3 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--color-text-title);">
+        Sale Recorded &amp; FIFO Stock Depleted
+      </h3>
+
+      <div id="modalTxnRef" class="mono-tag" style="color: var(--color-text-muted); font-size: 0.78rem; margin: 6px 0 16px 0;">
+        TXN-KN-20261025-9042
+      </div>
+
+      <!-- Monetary Amount Display -->
+      <div id="modalTxnTotal" style="font-family: var(--font-serif); font-size: 2.8rem; font-weight: 600; color: var(--color-accent-emerald); line-height: 1;">
+        ₹300.00
+      </div>
+
+      <div id="modalTxnMode" style="font-size: 0.88rem; font-weight: 600; color: var(--color-accent-purple); margin-top: 8px;">
+        ⚡ Paytm UPI Soundbox (Zero MDR)
+      </div>
+
+      <!-- Summary of Items -->
+      <div style="background: #FAF7F2; border-radius: var(--radius-item); padding: 12px; margin: 18px 0; text-align: left; font-size: 0.82rem;">
+        <div style="color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase;">Itemized Basket Decremented:</div>
+        <div id="modalTxnItems" style="color: var(--color-text-title); font-weight: 500; margin-top: 4px;">--</div>
+      </div>
+
+      <!-- Outbound WhatsApp Digital Receipt -->
+      <div style="background: rgba(27, 131, 84, 0.06); border: 1px solid rgba(27, 131, 84, 0.2); border-radius: var(--radius-item); padding: 12px; text-align: left; font-size: 0.8rem; color: var(--color-text-body); margin-bottom: 22px;">
+        <strong style="color: var(--color-accent-emerald);">📲 Outbound Vernacular WhatsApp Receipt:</strong>
+        <p id="modalWhatsappReceipt" style="margin-top: 4px; font-family: var(--font-sans);"></p>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" id="saleModalCloseBtn" class="btn-pill-light">Print Slip</button>
+        <button type="button" id="saleModalDoneBtn" class="btn-pill-dark">Next Customer Sale (↵)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: CREATE CUSTOMER KHATA ACCOUNT
+       ==================================================================== -->
+  <div id="newCustomerModal" class="sale-toast-overlay" role="dialog" aria-modal="true">
+    <div class="sale-success-card" style="text-align: left; max-width: 440px;">
+      <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin-bottom: 4px;">
+        Add Customer Khata Account
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px;">
+        Open a verified digital credit account with automated Kannada / Hindi WhatsApp receipts.
+      </p>
+
+      <form id="newCustomerForm" onsubmit="return false;">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Customer Full Name *
+          </label>
+          <input type="text" id="modalCustName" required placeholder="e.g. Ramesh Kumar"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Mobile Phone Number (for WhatsApp) *
+          </label>
+          <input type="tel" id="modalCustPhone" required placeholder="e.g. 9845012345"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Initial Credit / Existing Udhaar (₹)
+          </label>
+          <input type="number" id="modalCustInitialCredit" min="0" step="10" placeholder="0.00" value="0"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" id="modalCustCancelBtn" class="btn-pill-light">Cancel</button>
+          <button type="submit" id="modalCustSaveBtn" class="btn-pill-dark">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 0: EDIT COUNTER INFLOW & DISTRIBUTOR PAYABLES
+       ==================================================================== -->
+  <div id="modalEditMetrics" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 480px; width: 90%;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin: 0;">
+          Update Inflow &amp; Payables
+        </h3>
+        <button type="button" id="btnCloseEditMetricsX" style="background: none; border: none; font-size: 1.4rem; color: var(--color-text-muted); cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px; line-height: 1.4;">
+        Directly update Today's Counter Inflow (Cash &amp; UPI) and Distributor Payables in the live database.
+      </p>
+
+      <form id="editMetricsForm" onsubmit="return false;">
+        <!-- Group 1: Counter Inflow -->
+        <div style="background: rgba(27, 131, 84, 0.05); border: 1px solid rgba(27, 131, 84, 0.2); border-radius: var(--radius-item); padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--color-accent-emerald); text-transform: uppercase; letter-spacing: 0.04em;">
+              💰 Today's Counter Inflow
+            </span>
+            <span id="editMetricsTotalInflowBadge" style="font-size: 0.82rem; font-family: var(--font-mono); font-weight: 700; color: var(--color-accent-emerald);">
+              Total: ₹0.00
+            </span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+                Cash Inflow (₹)
+              </label>
+              <input type="number" id="editMetricCash" min="0" step="10" placeholder="0.00"
+                     style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+                UPI / QR Inflow (₹)
+              </label>
+              <input type="number" id="editMetricUpi" min="0" step="10" placeholder="0.00"
+                     style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+              Sales Transactions Count
+            </label>
+            <input type="number" id="editMetricSalesCount" min="0" step="1" placeholder="e.g. 15"
+                   style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+        </div>
+
+        <!-- Group 2: Distributor Payables -->
+        <div style="background: rgba(121, 82, 179, 0.05); border: 1px solid rgba(121, 82, 179, 0.2); border-radius: var(--radius-item); padding: 14px; margin-bottom: 20px;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-accent-purple); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">
+            📦 Distributor Payables
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+              Upcoming Supplier Bills Total (₹)
+            </label>
+            <input type="number" id="editMetricPayables" min="0" step="10" placeholder="0.00"
+                   style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 10px;">
+            <div>
+              <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+                Distributor Name
+              </label>
+              <input type="text" id="editMetricSupplier" placeholder="Sri Balaji Wholesale"
+                     style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.88rem; font-family: inherit; background: #FFF;" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 4px;">
+                Cheque Due Date
+              </label>
+              <input type="date" id="editMetricDueDate"
+                     style="width: 100%; padding: 8px 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.85rem; font-family: inherit; background: #FFF;" />
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" id="btnCancelEditMetrics" class="btn-pill-light">Cancel</button>
+          <button type="submit" id="btnSaveMetrics" class="btn-pill-dark">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 1: EDIT STORE PROFILE
+       ==================================================================== -->
+  <div id="modalEditStore" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 440px;">
+      <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin-bottom: 4px;">
+        Edit Store Profile
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px;">
+        Update business name, city, phone, and GSTIN reflected across customer receipts and reports.
+      </p>
+      <form id="editStoreForm" onsubmit="return false;">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Store / Business Name *
+          </label>
+          <input type="text" id="editStoreName" required placeholder="e.g. Ramesh Kirana &amp; General Store"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            City / Area *
+          </label>
+          <input type="text" id="editStoreCity" required placeholder="e.g. Malleshwaram, Bengaluru"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Mobile Phone Number
+          </label>
+          <input type="tel" id="editStorePhone" placeholder="e.g. 9845012345"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            GSTIN (Optional)
+          </label>
+          <input type="text" id="editStoreGstin" placeholder="e.g. 29ABCDE1234F1Z5"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" id="btnCancelEditStore" class="btn-pill-light">Cancel</button>
+          <button type="submit" id="btnSaveStoreProfile" class="btn-pill-dark">Save Store Details</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 2: EDIT SHELF PRODUCT / STOCK
+       ==================================================================== -->
+  <div id="modalEditProduct" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 460px;">
+      <h3 id="modalEditProductTitle" style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin-bottom: 4px;">
+        Edit Shelf Product
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px;">
+        Update product pricing, available shelf stock, and wholesale FIFO batch details.
+      </p>
+      <form id="editProductForm" onsubmit="return false;">
+        <input type="hidden" id="editProdOriginalName" />
+        <input type="hidden" id="editProdBatchId" />
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Product SKU Name *
+          </label>
+          <input type="text" id="editProdName" required placeholder="e.g. Fortune Sunflower Oil 1L"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Retail MRP (₹ Price) *
+            </label>
+            <input type="number" id="editProdPrice" required min="0" step="0.5" placeholder="165.00"
+                   style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Wholesale Cost (₹ Purchase)
+            </label>
+            <input type="number" id="editProdCost" min="0" step="0.5" placeholder="135.00"
+                   style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Available Stock Quantity *
+            </label>
+            <input type="number" id="editProdStock" required min="0" step="1" placeholder="25"
+                   style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Unit
+            </label>
+            <select id="editProdUnit" style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; background: #FFF;">
+              <option value="units">units / pcs</option>
+              <option value="litres">litres (L)</option>
+              <option value="kg">kilograms (kg)</option>
+              <option value="bags">bags</option>
+              <option value="packets">packets</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Batch Identifier / Number
+          </label>
+          <input type="text" id="editProdBatch" placeholder="FIFO-01"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center;">
+          <button type="button" id="btnDeleteProd" class="btn-action-sm" style="color: var(--color-accent-coral); border: 1px solid rgba(224, 86, 36, 0.3); background: rgba(224, 86, 36, 0.05); padding: 8px 12px;">
+            🗑️ Remove from Shelf
+          </button>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" id="btnCancelEditProd" class="btn-pill-light">Cancel</button>
+            <button type="submit" id="btnSaveEditProd" class="btn-pill-dark">Save Product</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 3: EDIT CUSTOMER KHATA ACCOUNT
+       ==================================================================== -->
+  <div id="modalEditCustomer" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 440px;">
+      <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin-bottom: 4px;">
+        Edit Customer Account
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px;">
+        Update customer contact info and outstanding credit balance.
+      </p>
+      <form id="editCustomerForm" onsubmit="return false;">
+        <input type="hidden" id="editCustOriginalName" />
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Customer Full Name *
+          </label>
+          <input type="text" id="editCustName" required placeholder="e.g. Ramesh Kumar"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Mobile Phone Number (WhatsApp) *
+          </label>
+          <input type="tel" id="editCustPhone" required placeholder="e.g. 9845012345"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Outstanding Credit / Udhaar Balance (₹)
+          </label>
+          <input type="number" id="editCustBalance" min="0" step="10" placeholder="0.00"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Notes / Details
+          </label>
+          <input type="text" id="editCustNotes" placeholder="e.g. Verified neighborhood buyer"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center;">
+          <button type="button" id="btnDeleteCust" class="btn-action-sm" style="color: var(--color-accent-coral); border: 1px solid rgba(224, 86, 36, 0.3); background: rgba(224, 86, 36, 0.05); padding: 8px 12px;">
+            🗑️ Delete
+          </button>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" id="btnCancelEditCust" class="btn-pill-light">Cancel</button>
+            <button type="submit" id="btnSaveEditCust" class="btn-pill-dark">Save Customer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 4: EDIT SUPPLIER INVOICE & PAYABLES
+       ==================================================================== -->
+  <div id="modalEditInvoice" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 440px;">
+      <h3 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--color-text-title); margin-bottom: 4px;">
+        Edit Supplier Invoice
+      </h3>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 18px;">
+        Update wholesale distributor bill, due date, or payable status.
+      </p>
+      <form id="editInvoiceForm" onsubmit="return false;">
+        <input type="hidden" id="editInvOriginalNumber" />
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Distributor / Supplier Name *
+          </label>
+          <input type="text" id="editInvSupplier" required placeholder="e.g. Sri Balaji Traders"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Invoice Number *
+          </label>
+          <input type="text" id="editInvNumber" required placeholder="e.g. INV-9042"
+                 style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Payable Amount (₹) *
+            </label>
+            <input type="number" id="editInvAmount" required min="0" step="1" placeholder="4500.00"
+                   style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+              Credit Due Date
+            </label>
+            <input type="date" id="editInvDueDate"
+                   style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: inherit; background: #FFF;" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+            Payment Status
+          </label>
+          <select id="editInvStatus" style="width: 100%; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; background: #FFF;">
+            <option value="LOGGED">LOGGED (Upcoming Cheque)</option>
+            <option value="PAID">PAID (Settled)</option>
+            <option value="DISPUTED">DISPUTED</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" id="btnCancelEditInv" class="btn-pill-light">Cancel</button>
+          <button type="submit" id="btnSaveEditInv" class="btn-pill-dark">Save Invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       CORNER FLOATING VERNACULAR VOICE COPILOT (MATCHING SAHAYAK BRAND & DESIGN)
+       ==================================================================== -->
+  <aside id="floatingVoiceWidget" class="floating-voice-widget" aria-label="Sahayak AI Voice Copilot">
+    
+    <!-- Popover Drawer Card (Opens directly above floating button when clicked) -->
+    <div id="voicePopoverCard" class="voice-popover-card" style="display: none;" role="dialog" aria-modal="false" aria-label="Sahayak Voice Assistant">
+      <!-- Card Header: Matches top brand "sahayak सहायक • Voice" -->
+      <div class="voice-popover-header">
+        <div class="voice-popover-title">
+          <span class="voice-brand-logo">sahayak</span>
+          <span class="voice-brand-hindi">सहायक</span>
+          <span class="voice-brand-copilot">Voice</span>
+        </div>
+        <div class="voice-popover-actions">
+          <span id="voiceOnlineBadge" class="voice-online-badge">LIVE</span>
+          <button type="button" id="btnCloseVoicePopover" class="voice-popover-close-btn" title="Close" aria-label="Close">&times;</button>
+        </div>
+      </div>
+
+      <!-- Vernacular Language Segmented Selector -->
+      <div class="voice-popover-section">
+        <div class="voice-section-label">SELECT VOICE LANGUAGE:</div>
+        <div class="voice-lang-tabs" role="tablist">
+          <button type="button" class="voice-lang-tab active" data-lang="hi-IN" role="tab" aria-selected="true">
+            <span class="tab-flag">🇮🇳</span> Hindi
+          </button>
+          <button type="button" class="voice-lang-tab" data-lang="kn-IN" role="tab" aria-selected="false">
+            <span class="tab-flag">🟡</span> Kannada
+          </button>
+          <button type="button" class="voice-lang-tab" data-lang="en-IN" role="tab" aria-selected="false">
+            <span class="tab-flag">🇬🇧</span> Hinglish
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Action: Tap to Speak Button -->
+      <div class="voice-popover-section" style="margin-bottom: 0;">
+        <button type="button" id="btnPopoverMic" class="voice-main-mic-btn" title="Tap to Speak (बोलें / ಮಾತನಾಡಿ)">
+          <div class="mic-btn-content">
+            <span class="mic-icon-circle">🎙️</span>
+            <div class="mic-btn-text">
+              <span id="micBtnTitle" class="mic-btn-title">Tap to Speak Counter Sale</span>
+              <span id="micBtnSub" class="mic-btn-sub">Sarvam AI • Hindi Voice</span>
+            </div>
+          </div>
+          <div id="micSoundwave" class="mic-soundwave" style="display: none;">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Live Voice Output / Bot Response Feedback -->
+      <div id="voiceFeedbackPanel" class="voice-feedback-panel" style="display: none;">
+        <div class="feedback-status-row">
+          <span id="feedbackStatusBadge" class="feedback-badge">VOICE TRANSCRIPT</span>
+          <span id="voiceAudioSpeakingPill" class="feedback-speaking-pill" style="display: none;">
+            🔊 Bulbul TTS
+          </span>
+        </div>
+        <div id="voiceFeedbackBody" class="feedback-body-text">--</div>
+        <button type="button" id="btnReplayVoiceFeedback" class="feedback-replay-btn" style="display: none;">
+          🔊 Replay Voice
+        </button>
+      </div>
+
+    </div>
+
+    <!-- The Single Floating Point (FAB Circle Icon in Side Corner) -->
+    <button type="button" id="btnFloatingVoiceToggle" class="floating-voice-fab" title="Sahayak Voice Copilot" aria-label="Open Sahayak Voice Copilot" aria-haspopup="dialog" aria-expanded="false">
+      <span class="fab-icon-sparkle">✦</span>
+      <span class="fab-icon-close" style="display: none;">&times;</span>
+    </button>
+
+  </aside>
+
+  <!-- Dashboard JavaScript -->
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

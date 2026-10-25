@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sahayak (सहायक) — Kirana Touch Counter POS</title>
+  <title>Sahayak (सहायक) — Small Business Touch Counter POS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -296,6 +296,100 @@
       overflow-y: auto;
       white-space: pre-wrap;
     }
+
+    /* Phase 3: Modal & Scenario Sandbox Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 7, 15, 0.88);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #0b1329;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.15);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 980px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 18px 24px;
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .kpi-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .kpi-title { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+    .kpi-val { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+    .traj-container {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .traj-bar {
+      flex: 1;
+      min-width: 85px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .traj-bar.SAFE { border-color: rgba(0, 210, 106, 0.4); background: rgba(0, 210, 106, 0.05); }
+    .traj-bar.TIGHT { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.05); }
+    .traj-bar.CRUNCH { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.08); }
+    .shock-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .shock-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -305,9 +399,10 @@
       <h2>Sahayak (सहायक)</h2>
       <span class="badge">Phase 2: Touch Counter POS</span>
     </div>
-    <div class="nav-links">
-      <a href="/simulator">📸 Bill OCR Simulator</a>
-      <a href="/docs" target="_blank">📖 Swagger API Docs</a>
+    <div class="nav-links" style="display:flex; align-items:center; gap:12px;">
+      <button onclick="openForecastModal()" class="badge" style="background:rgba(56, 189, 248, 0.15); color:var(--accent); border:1px solid rgba(56, 189, 248, 0.4); cursor:pointer; padding:6px 14px; font-size:0.85rem;">📊 Phase 3: Cash Runway &amp; What-If Sandbox</button>
+      <a href="/simulator">📸 Bill OCR</a>
+      <a href="/docs" target="_blank">📖 Swagger API</a>
     </div>
   </header>
 
@@ -599,6 +694,267 @@
     }
 
     initCatalog();
+
+    /* ========================================================
+       PHASE 3: AGENT 5 CASH RUNWAY & WHAT-IF SCENARIO SANDBOX
+       ======================================================== */
+    let currentForecastDays = 7;
+    let selectedShockVector = 'EMERGENCY_EXPENSE';
+
+    function openForecastModal() {
+      document.getElementById('forecastModal').style.display = 'flex';
+      fetchForecast(currentForecastDays);
+    }
+
+    function closeForecastModal() {
+      document.getElementById('forecastModal').style.display = 'none';
+    }
+
+    function selectHorizon(days) {
+      currentForecastDays = days;
+      document.querySelectorAll('.horizon-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`btnH${days}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      fetchForecast(days);
+    }
+
+    function selectShockVector(vector) {
+      selectedShockVector = vector;
+      document.querySelectorAll('.shock-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`shockBtn_${vector}`);
+      if (btn) btn.classList.add('active');
+
+      // Adjust input labels based on shock
+      const shockLabel = document.getElementById('shockParamLabel');
+      const shockInput = document.getElementById('shockParamVal');
+      if (vector === 'EMERGENCY_EXPENSE') {
+        shockLabel.innerText = 'Lump-sum Repair / Expense (₹):';
+        shockInput.value = '6000';
+      } else if (vector === 'KHATA_LAG') {
+        shockLabel.innerText = 'Customer Repayment Delay (Days):';
+        shockInput.value = '10';
+      } else if (vector === 'REVENUE_SLUMP') {
+        shockLabel.innerText = 'Walk-in Sales Drop (%):';
+        shockInput.value = '25';
+      } else if (vector === 'SUPPLIER_TERM_SHIFT') {
+        shockLabel.innerText = 'Distributor Term Shortening (Days):';
+        shockInput.value = '7';
+      }
+    }
+
+    async function fetchForecast(days) {
+      try {
+        const res = await fetch(`/api/counter/forecast?merchant_id=M_9876543210&days=${days}`);
+        const data = await res.json();
+        renderForecastData(data);
+      } catch (err) {
+        console.error("Forecast fetch error:", err);
+      }
+    }
+
+    function renderForecastData(data) {
+      document.getElementById('kpiLiquid').innerText = `₹${data.current_liquid_cash.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+      document.getElementById('kpiKhata').innerText = `+₹${data.expected_receivables_weighted.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+      document.getElementById('kpiKhataSub').innerText = `of ₹${data.total_khata_receivables.toLocaleString('en-IN')} total baaki`;
+      document.getElementById('kpiPayables').innerText = `-₹${data.committed_supplier_payables.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+      document.getElementById('kpiNet').innerText = `₹${data.projected_balance.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+
+      const banner = document.getElementById('forecastBanner');
+      if (data.has_cash_crunch) {
+        banner.style.background = 'rgba(239, 68, 68, 0.15)';
+        banner.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        banner.style.color = '#ef4444';
+        banner.innerHTML = `🚨 <strong>CASH CRUNCH ALERT:</strong> Projected deficit of <strong>₹${data.shortfall_amount.toLocaleString('en-IN', {minimumFractionDigits:2})}</strong> within ${data.forecast_days} days! Cheque bounce risk detected.`;
+      } else {
+        banner.style.background = 'rgba(0, 210, 106, 0.12)';
+        banner.style.borderColor = 'rgba(0, 210, 106, 0.3)';
+        banner.style.color = '#00d26a';
+        banner.innerHTML = `🟢 <strong>HEALTHY RUNWAY:</strong> Safe liquidity buffer maintained over the next ${data.forecast_days} days. Zero cheque bounce risk.`;
+      }
+
+      // Render Trajectory
+      const trajBox = document.getElementById('trajBox');
+      trajBox.innerHTML = '';
+      (data.trajectory || []).forEach(t => {
+        const bar = document.createElement('div');
+        bar.className = `traj-bar ${t.status}`;
+        bar.innerHTML = `
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">${t.day_name}</div>
+          <div style="font-size:0.65rem; color:#64748b;">${t.date.slice(5)}</div>
+          <div style="font-size:0.82rem; font-weight:700; margin-top:4px;">₹${Math.round(t.projected_balance).toLocaleString('en-IN')}</div>
+          <div style="font-size:0.6rem; text-transform:uppercase; font-weight:700; margin-top:2px;">${t.status}</div>
+        `;
+        trajBox.appendChild(bar);
+      });
+
+      // Render Recommendations
+      const recList = document.getElementById('recList');
+      recList.innerHTML = '';
+      (data.recommendations || []).forEach((r, idx) => {
+        const item = document.createElement('div');
+        item.style.padding = '10px 12px';
+        item.style.background = 'rgba(15, 23, 42, 0.7)';
+        item.style.border = '1px solid rgba(255, 255, 255, 0.06)';
+        item.style.borderRadius = '8px';
+        item.style.fontSize = '0.85rem';
+        item.innerHTML = `<strong>Action ${idx+1}:</strong> ${r}`;
+        recList.appendChild(item);
+      });
+    }
+
+    async function runWhatIfSimulation() {
+      const val = parseFloat(document.getElementById('shockParamVal').value) || 0;
+      let payload = {
+        merchant_id: "M_9876543210",
+        shock_vector: selectedShockVector,
+        forecast_days: currentForecastDays,
+        shock_amount: 0,
+        delay_days: 0,
+        slump_pct: 0
+      };
+
+      if (selectedShockVector === 'EMERGENCY_EXPENSE') {
+        payload.shock_amount = val;
+      } else if (selectedShockVector === 'KHATA_LAG') {
+        payload.delay_days = parseInt(val);
+      } else if (selectedShockVector === 'REVENUE_SLUMP') {
+        payload.slump_pct = val;
+      } else if (selectedShockVector === 'SUPPLIER_TERM_SHIFT') {
+        payload.delay_days = parseInt(val);
+      }
+
+      document.getElementById('btnRunSim').innerText = 'Simulating...';
+
+      try {
+        const res = await fetch('/api/counter/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const sim = await res.json();
+        document.getElementById('simResultsBox').style.display = 'flex';
+        document.getElementById('simBaseBal').innerText = `₹${sim.baseline_projected_balance.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+        document.getElementById('simStressBal').innerText = `₹${sim.stressed_projected_balance.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+        document.getElementById('simDelta').innerText = `-₹${Math.abs(sim.net_impact_delta).toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+
+        const simBadge = document.getElementById('simOutcomeBadge');
+        if (sim.has_cash_crunch) {
+          simBadge.innerText = `🚨 DEFICIT SHORTFALL OF ₹${sim.shortfall_amount.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+          simBadge.style.color = '#ef4444';
+        } else {
+          simBadge.innerText = `🟢 SAFE: SURPLUS OF ₹${sim.stressed_projected_balance.toLocaleString('en-IN', {minimumFractionDigits:2})}`;
+          simBadge.style.color = '#00d26a';
+        }
+      } catch (err) {
+        alert("Simulation error: " + err.message);
+      } finally {
+        document.getElementById('btnRunSim').innerText = '⚡ Run What-If Simulation';
+      }
+    }
   </script>
+
+  <!-- PHASE 3: AGENT 5 MODAL -->
+  <div id="forecastModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 style="font-size:1.15rem; font-weight:700;">📊 Agent 5: Real-Time Cash Forecast &amp; "What-If" Sandbox</h3>
+          <span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent);">Phase 3 Engine</span>
+        </div>
+        <button onclick="closeForecastModal()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Horizon Selectors -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.85rem; color:var(--text-muted);">Predictive Runway Horizon:</span>
+          <div style="display:flex; gap:8px;">
+            <button id="btnH7" class="shock-btn active" onclick="selectHorizon(7)">7-Day Runway</button>
+            <button id="btnH15" class="shock-btn" onclick="selectHorizon(15)">15-Day Runway</button>
+            <button id="btnH30" class="shock-btn" onclick="selectHorizon(30)">30-Day Runway</button>
+          </div>
+        </div>
+
+        <!-- Alert Banner -->
+        <div id="forecastBanner" style="padding:12px 16px; border-radius:10px; font-size:0.88rem; border:1px solid transparent;">
+          Calculating rolling runway...
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <span class="kpi-title">💵 Settled Liquid Cash</span>
+            <span class="kpi-val" id="kpiLiquid">₹0.00</span>
+            <span style="font-size:0.7rem; color:var(--text-muted);">Cash in Drawer + Settled UPI</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-title">👥 Expected Khata Recovery</span>
+            <span class="kpi-val" id="kpiKhata" style="color:var(--accent);">+₹0.00</span>
+            <span style="font-size:0.7rem; color:var(--text-muted);" id="kpiKhataSub">Reliability-Weighted</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-title">🚚 Committed Cheques</span>
+            <span class="kpi-val" id="kpiPayables" style="color:var(--danger);">-₹0.00</span>
+            <span style="font-size:0.7rem; color:var(--text-muted);">Wholesale Bills Due in Window</span>
+          </div>
+          <div class="kpi-card" style="border-color:rgba(0,210,106,0.3); background:rgba(0,210,106,0.06);">
+            <span class="kpi-title">💰 Projected Balance</span>
+            <span class="kpi-val" id="kpiNet" style="color:var(--primary);">₹0.00</span>
+            <span style="font-size:0.7rem; color:var(--primary);">Net Safe Runway</span>
+          </div>
+        </div>
+
+        <!-- Trajectory Timeline Bar Chart -->
+        <div>
+          <div style="font-size:0.85rem; font-weight:600; margin-bottom:8px; color:var(--text);">📈 Day-by-Day Liquidity Trajectory:</div>
+          <div class="traj-container" id="trajBox"></div>
+        </div>
+
+        <!-- What-If Scenario Sandbox -->
+        <div style="background:rgba(15, 23, 42, 0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.92rem; font-weight:700; color:var(--accent);">🔮 Interactive "What-If" Shock Sandbox</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Slide 4: Zero AI Hallucination Math</span>
+          </div>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="shockBtn_EMERGENCY_EXPENSE" class="shock-btn active" onclick="selectShockVector('EMERGENCY_EXPENSE')">🚨 Emergency Repair (₹)</button>
+            <button id="shockBtn_KHATA_LAG" class="shock-btn" onclick="selectShockVector('KHATA_LAG')">👥 Khata Repayment Delay</button>
+            <button id="shockBtn_REVENUE_SLUMP" class="shock-btn" onclick="selectShockVector('REVENUE_SLUMP')">📉 25% Sales Slump</button>
+            <button id="shockBtn_SUPPLIER_TERM_SHIFT" class="shock-btn" onclick="selectShockVector('SUPPLIER_TERM_SHIFT')">🚚 Supplier Terms Tightening</button>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center;">
+            <label id="shockParamLabel" style="font-size:0.85rem; color:var(--text); min-width:240px;">Lump-sum Repair / Expense (₹):</label>
+            <input type="number" id="shockParamVal" class="form-input" value="6000" style="max-width:180px;">
+            <button id="btnRunSim" onclick="runWhatIfSimulation()" class="btn-complete" style="max-width:240px; padding:10px; font-size:0.9rem; background:var(--accent);">⚡ Run What-If Simulation</button>
+          </div>
+
+          <!-- Stressed vs Baseline Result Card -->
+          <div id="simResultsBox" style="display:none; background:rgba(0,0,0,0.4); border-radius:10px; padding:12px; display:flex; justify-content:space-around; align-items:center;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Normal Projection:</div>
+              <div id="simBaseBal" style="font-size:1.1rem; font-weight:700; color:var(--text);">₹0.00</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Post-Scenario Balance:</div>
+              <div id="simStressBal" style="font-size:1.1rem; font-weight:700; color:#ef4444;">₹0.00</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Net Financial Shock:</div>
+              <div id="simDelta" style="font-size:1.1rem; font-weight:700; color:var(--warning);">-₹0.00</div>
+            </div>
+            <div id="simOutcomeBadge" style="font-size:0.82rem; font-weight:800; padding:6px 12px; border-radius:6px; background:rgba(255,255,255,0.05);"></div>
+          </div>
+        </div>
+
+        <!-- Corrective Decisions Matrix -->
+        <div>
+          <div style="font-size:0.88rem; font-weight:700; color:var(--text); margin-bottom:8px;">💡 Agent 5 Corrective Decisions (Ranked):</div>
+          <div id="recList" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

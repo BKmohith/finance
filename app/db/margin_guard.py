@@ -3,6 +3,7 @@ app/db/margin_guard.py
 Agent 3: Deterministic Margin-Guard Price-Shield Engine.
 Detects wholesale price increases (>3%) and re-computes recommended retail MRP.
 """
+from datetime import datetime
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, desc, func
@@ -92,3 +93,55 @@ def evaluate_price_deviations(
                     alerts.append(alert)
 
     return alerts
+
+
+def get_all_price_hikes(
+    session: Session,
+    merchant_id: str,
+    hike_threshold_pct: float = 3.0,
+    target_retail_margin_pct: float = 12.0
+) -> List[dict]:
+    """
+    Scans historical purchase records in PriceHistory for a merchant.
+    Identifies all SKUs whose latest wholesale cost jumped by >= hike_threshold_pct.
+    Calculates recommended shelf MRP to protect gross retail margins (Zero LLM, Pure SQL).
+    """
+    # 1. Distinct items for this merchant
+    item_stmt = select(PriceHistory.item_name).where(
+        PriceHistory.merchant_id == merchant_id
+    ).distinct()
+    items = session.execute(item_stmt).scalars().all()
+
+    hikes: List[dict] = []
+    margin_multiplier = 1.0 + (target_retail_margin_pct / 100.0)
+
+    for item_name in items:
+        # Get the 2 most recent price recordings for this SKU
+        rate_stmt = select(PriceHistory).where(
+            and_(
+                PriceHistory.merchant_id == merchant_id,
+                func.lower(func.trim(PriceHistory.item_name)) == func.lower(func.trim(item_name))
+            )
+        ).order_by(desc(PriceHistory.recorded_at), desc(PriceHistory.id)).limit(2)
+
+        records = session.execute(rate_stmt).scalars().all()
+        if len(records) >= 2:
+            current = records[0]
+            previous = records[1]
+            if previous.unit_wholesale_rate > 0:
+                hike_pct = ((current.unit_wholesale_rate - previous.unit_wholesale_rate) / previous.unit_wholesale_rate) * 100.0
+                if hike_pct >= hike_threshold_pct:
+                    suggested_mrp = round(current.unit_wholesale_rate * margin_multiplier, 2)
+                    hikes.append({
+                        "item_name": item_name,
+                        "old_wholesale_rate": round(previous.unit_wholesale_rate, 2),
+                        "new_wholesale_rate": round(current.unit_wholesale_rate, 2),
+                        "percentage_hike": round(hike_pct, 1),
+                        "suggested_retail_mrp": suggested_mrp,
+                        "recorded_at": current.recorded_at
+                    })
+
+    # Sort most recent hikes first
+    hikes.sort(key=lambda h: h["recorded_at"] or datetime.min, reverse=True)
+    return hikes
+

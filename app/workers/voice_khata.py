@@ -49,19 +49,36 @@ class VoiceKhataParser:
             return None
 
         cleaned = text.strip()
+        lower = cleaned.lower()
+
+        # Inquiries / questions are advisory, not direct ledger writes
+        if cleaned.endswith("?") or lower.startswith(("can i", "should i", "kya me", "kya hum", "kya main", "is it safe")):
+            return None
 
         # 1. Action Detection (Give Credit vs Collect Payment)
         action = "GIVE_CREDIT"
         if re.search(r"\b(jama|paid|chukaya|vasool|collected|received|wapas|bharpai)\b", cleaned, re.I):
             action = "COLLECT_PAYMENT"
 
-        # 2. Extract Monetary Amount
+        # 2. Extract Customer Phone Number (e.g. 9876543210, +919876543210, 9845012345)
+        customer_phone = None
+        phone_match = re.search(r"(?:\+91[\-\s]?)?[6-9]\d{9}\b", cleaned)
+        if phone_match:
+            raw_phone = phone_match.group(0).replace(" ", "").replace("-", "")
+            customer_phone = raw_phone if raw_phone.startswith("+91") else f"+91{raw_phone}"
+            # Remove phone number from cleaned text so digits don't collide with monetary amount
+            cleaned = cleaned[:phone_match.start()] + " " + cleaned[phone_match.end():]
+
+        # 3. Extract Monetary Amount
         amount_match = re.search(r"(?:₹|rs\.?|inr|roopayi|rupaye|rupees)?\s*(\d+(?:\.\d{1,2})?)\s*(?:₹|rs\.?|inr|roopayi|rupaye|rupees)?", cleaned, re.I)
         if not amount_match:
+            # Fallback to Gemini if regex cannot find monetary amount
+            if settings.GEMINI_API_KEY:
+                return self._parse_khata_with_gemini(text)
             return None
         amount = float(amount_match.group(1))
 
-        # 3. Extract Customer Name
+        # 4. Extract Customer Name
         customer_name = "Customer"
 
         # Check Kannada Name Patterns
@@ -77,7 +94,7 @@ class VoiceKhataParser:
             if name_match:
                 candidate = name_match.group(1).strip()
                 # Ensure it's not a payment keyword
-                if candidate.lower() not in {"paytm", "gpay", "phonepe", "cash", "upi", "give", "paid", "credit", "kannada"}:
+                if candidate.lower() not in {"paytm", "gpay", "phonepe", "cash", "upi", "give", "paid", "credit", "kannada", "phone"}:
                     customer_name = candidate
             else:
                 # Kannada suffix "avarige" (e.g., "Ramesh avarige")
@@ -91,9 +108,48 @@ class VoiceKhataParser:
             customer_name=customer_name,
             amount=amount,
             action=action,
-            transcription=cleaned,
+            transcription=text.strip(),
             confidence=confidence,
+            customer_phone=customer_phone,
         )
+
+    def _parse_khata_with_gemini(self, text: str) -> Optional[VoiceKhataIntent]:
+        """Fallback to Google Gemini for conversational Khata entries."""
+        try:
+            import json
+            from google import genai
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            prompt = (
+                "Extract customer credit (Udhaar) ledger entry from this Indian retail text.\n"
+                "Output ONLY a raw JSON object matching this schema:\n"
+                "{\n"
+                '  "customer_name": str,\n'
+                '  "amount": float,\n'
+                '  "action": "GIVE_CREDIT" | "COLLECT_PAYMENT",\n'
+                '  "customer_phone": str | null\n'
+                "}\n"
+                f'Text: "{text}"'
+            )
+            resp = client.models.generate_content(
+                model=settings.GEMINI_MODEL or "gemini-3.5-flash-lite",
+                contents=prompt,
+            )
+            if resp.text:
+                clean_json = resp.text.strip().replace("```json", "").replace("```", "").strip()
+                data = json.loads(clean_json)
+                amt = float(data.get("amount") or 0.0)
+                if amt > 0:
+                    return VoiceKhataIntent(
+                        customer_name=data.get("customer_name") or "Customer",
+                        amount=amt,
+                        action=data.get("action") or "GIVE_CREDIT",
+                        transcription=text.strip(),
+                        confidence=0.98,
+                        customer_phone=data.get("customer_phone"),
+                    )
+        except Exception as e:
+            logger.warning(f"[VoiceKhataParser] Gemini Khata fallback failed: {e}")
+        return None
 
     def parse_counter_sale(
         self, text: str, merchant_id: str = "M_DEMO_001"
@@ -101,6 +157,7 @@ class VoiceKhataParser:
         """
         Parses itemized counter sales shorthand into CounterSaleEvent.
         Examples:
+          - "28 units of sunflower oil at price 8000" -> 28 units at ₹285.71 each, Total ₹8000
           - "25 bag atta 450 cash" -> 25 bags of atta at ₹450 each (total ₹11,250), Cash
           - "Paytm 300 Oil 2" -> 2 units of Oil totaling ₹300, Paytm UPI
           - "5 packet milk 30 upi" -> 5 packets of milk at ₹30 each (total ₹150), UPI
@@ -122,27 +179,80 @@ class VoiceKhataParser:
         items: List[CounterItemSale] = []
         total_amount = 0.0
 
-        # Pattern 1: Explicit Payment prefix + Total Amount + Item + Qty (e.g. "Paytm 300 Oil 2")
-        pat_pay = re.search(
-            r"\b(?:paytm|cash|upi|gpay|phonepe)\s+(\d+(?:\.\d+)?)\s+([A-Za-z]+)\s+(\d+(?:\.\d+)?)\b",
+        # Pattern Special: <qty> [unit]? [of]? <multi-word item> (?:at price|price|at|for|rate|rs|₹) <total_or_rate>
+        # e.g. "28 units of sunflower oil at price 8000" or "5 kg of basmati rice for 600"
+        pat_qty_item_price = re.search(
+            r"^(?:sold|becha)?\s*(\d+(?:\.\d+)?)\s*(bag|bags|kg|packet|pack|packets|ltr|litre|litres|bottle|bottles|pcs|units|box|boxes)?\s*(?:of\s+)?([A-Za-z\s]+?)\s+(?:at\s+price|price|at|for|rate|rs\.?|₹|inr)\s*(\d+(?:\.\d+)?)$",
             cleaned,
-            re.I,
+            re.I
         )
-        if pat_pay:
-            tot = float(pat_pay.group(1))
-            item_name = pat_pay.group(2).strip()
-            qty = float(pat_pay.group(3))
-            unit_price = round(tot / qty, 2) if qty > 0 else tot
+        if pat_qty_item_price:
+            qty = float(pat_qty_item_price.group(1))
+            unit = pat_qty_item_price.group(2) or "units"
+            item_name = pat_qty_item_price.group(3).strip()
+            total_or_rate = float(pat_qty_item_price.group(4))
+            
+            # If total_or_rate is clearly total price (e.g. 8000 for 28 units), divide to find unit price
+            line_tot = total_or_rate
+            unit_price = round(line_tot / qty, 2) if qty > 0 else line_tot
             items.append(
                 CounterItemSale(
                     item_name=item_name,
                     quantity=qty,
-                    unit="units",
-                    unit_retail_price=unit_price,
-                    line_total=tot,
+                    unit=unit,
+                    unit_retail_price=max(unit_price, 0.01),
+                    line_total=max(line_tot, 0.01),
                 )
             )
-            total_amount = tot
+            total_amount = line_tot
+
+        # Pattern 0: [Payment]? [Currency]? <Total_Amount> [Currency]? <Item_Name> <Qty> [Unit]?
+        # Examples: "12000 ruppes ashirwad atta 8 bags", "paytm 300 oil 2", "150 rs sugar 3 kg"
+        if not items:
+            pat_amt_item_qty = re.search(
+                r"^(?:(?:paytm|cash|upi|gpay|phonepe)\s+)?(?:₹|rs\.?|inr|rupees|ruppes|rupaye)?\s*(\d+(?:\.\d+)?)\s*(?:(?:₹|rs\.?|inr|rupees|ruppes|rupaye)\s+)?([A-Za-z\s]+?)\s+(\d+(?:\.\d+)?)\s*(bag|bags|kg|packet|pack|packets|ltr|litre|litres|bottle|bottles|pcs|units|box|boxes)?$",
+                cleaned,
+                re.I,
+            )
+            if pat_amt_item_qty:
+                tot = float(pat_amt_item_qty.group(1))
+                item_name = pat_amt_item_qty.group(2).strip()
+                qty = float(pat_amt_item_qty.group(3))
+                unit = pat_amt_item_qty.group(4) or "units"
+                unit_price = round(tot / qty, 2) if qty > 0 else tot
+                items.append(
+                    CounterItemSale(
+                        item_name=item_name,
+                        quantity=qty,
+                        unit=unit,
+                        unit_retail_price=max(unit_price, 0.01),
+                        line_total=max(tot, 0.01),
+                    )
+                )
+                total_amount = tot
+
+        # Pattern 1: Explicit Payment prefix + Total Amount + Item + Qty (e.g. "Paytm 300 Oil 2")
+        if not items:
+            pat_pay = re.search(
+                r"\b(?:paytm|cash|upi|gpay|phonepe)\s+(\d+(?:\.\d+)?)\s+([A-Za-z]+)\s+(\d+(?:\.\d+)?)\b",
+                cleaned,
+                re.I,
+            )
+            if pat_pay:
+                tot = float(pat_pay.group(1))
+                item_name = pat_pay.group(2).strip()
+                qty = float(pat_pay.group(3))
+                unit_price = round(tot / qty, 2) if qty > 0 else tot
+                items.append(
+                    CounterItemSale(
+                        item_name=item_name,
+                        quantity=qty,
+                        unit="units",
+                        unit_retail_price=max(unit_price, 0.01),
+                        line_total=max(tot, 0.01),
+                    )
+                )
+                total_amount = tot
 
         # Pattern 2: <qty> <unit> <item_name> <unit_rate> (e.g. "25 bag atta 450 cash" or "5 packet milk 30 upi")
         if not items:
@@ -162,8 +272,8 @@ class VoiceKhataParser:
                         item_name=item_name,
                         quantity=qty,
                         unit=unit,
-                        unit_retail_price=rate,
-                        line_total=line_total,
+                        unit_retail_price=max(rate, 0.01),
+                        line_total=max(line_total, 0.01),
                     )
                 )
                 total_amount = line_total
@@ -185,13 +295,13 @@ class VoiceKhataParser:
                         item_name=item_name,
                         quantity=qty,
                         unit="units",
-                        unit_retail_price=rate,
-                        line_total=line_total,
+                        unit_retail_price=max(rate, 0.01),
+                        line_total=max(line_total, 0.01),
                     )
                 )
                 total_amount = line_total
 
-        # If items detected, construct event
+        # If items detected via local fast path, construct event
         if items:
             return CounterSaleEvent(
                 merchant_id=merchant_id,
@@ -202,7 +312,7 @@ class VoiceKhataParser:
                 timestamp=datetime.utcnow(),
             )
 
-        # Fallback to Gemini if regex fails
+        # Fallback to Gemini with strict arithmetic derivation
         if settings.GEMINI_API_KEY:
             gemini_event = self._parse_with_gemini(cleaned, merchant_id)
             if gemini_event:
@@ -211,7 +321,7 @@ class VoiceKhataParser:
         return None
 
     def _parse_with_gemini(self, text: str, merchant_id: str) -> Optional[CounterSaleEvent]:
-        """Fallback to Google Gemini for complex, unstructured sales text."""
+        """Fallback to Google Gemini for complex, unstructured sales text with arithmetic normalization."""
         try:
             import json
             from google import genai
@@ -227,23 +337,90 @@ class VoiceKhataParser:
                 '    {"item_name": str, "quantity": float, "unit": str, "unit_retail_price": float, "line_total": float}\n'
                 "  ]\n"
                 "}\n"
+                "IMPORTANT: If user specifies a total price for multiple units (e.g. '28 units of sunflower oil at price 8000'), "
+                "set line_total = 8000 and calculate unit_retail_price = line_total / quantity (285.71). "
+                "Never leave unit_retail_price or line_total as 0.\n"
                 f'Text: "{text}"'
             )
             resp = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
+                model=settings.GEMINI_MODEL or "gemini-3.5-flash-lite",
                 contents=prompt,
             )
             if resp.text:
                 clean_json = resp.text.strip().replace("```json", "").replace("```", "").strip()
                 data = json.loads(clean_json)
-                items = [CounterItemSale(**item) for item in data.get("items", [])]
-                return CounterSaleEvent(
-                    merchant_id=merchant_id,
-                    amount_paid=data.get("amount_paid", 0.0),
-                    payment_method=PaymentMethod(data.get("payment_method", "CASH")),
-                    items=items,
-                    timestamp=datetime.utcnow(),
-                )
+
+                raw_items = data.get("items", [])
+                clean_items: List[CounterItemSale] = []
+                total_derived = 0.0
+
+                for it in raw_items:
+                    name = str(it.get("item_name") or "Retail Item").strip()
+                    unit = str(it.get("unit") or "units").strip()
+                    try:
+                        qty = float(it.get("quantity") or 1.0)
+                    except (ValueError, TypeError):
+                        qty = 1.0
+                    if qty <= 0:
+                        qty = 1.0
+
+                    try:
+                        tot = float(it.get("line_total") or 0.0)
+                    except (ValueError, TypeError):
+                        tot = 0.0
+
+                    try:
+                        rate = float(it.get("unit_retail_price") or 0.0)
+                    except (ValueError, TypeError):
+                        rate = 0.0
+
+                    # Arithmetic Reconciliation (Zero Hallucination / Zero Division Error)
+                    if rate <= 0 and tot > 0:
+                        rate = round(tot / qty, 2)
+                    elif tot <= 0 and rate > 0:
+                        tot = round(qty * rate, 2)
+                    elif rate <= 0 and tot <= 0:
+                        raw_paid = float(data.get("amount_paid") or 0.0)
+                        if raw_paid > 0:
+                            tot = raw_paid
+                            rate = round(tot / qty, 2)
+                        else:
+                            rate = 1.0
+                            tot = qty
+
+                    rate = max(rate, 0.01)
+                    tot = max(tot, round(qty * rate, 2))
+                    total_derived += tot
+
+                    clean_items.append(
+                        CounterItemSale(
+                            item_name=name,
+                            quantity=qty,
+                            unit=unit,
+                            unit_retail_price=rate,
+                            line_total=tot,
+                        )
+                    )
+
+                if clean_items:
+                    amt_paid = float(data.get("amount_paid") or total_derived)
+                    if amt_paid <= 0:
+                        amt_paid = total_derived
+
+                    method_str = str(data.get("payment_method") or "CASH").upper()
+                    try:
+                        pay_method = PaymentMethod(method_str)
+                    except ValueError:
+                        pay_method = PaymentMethod.CASH
+
+                    return CounterSaleEvent(
+                        merchant_id=merchant_id,
+                        amount_paid=amt_paid if pay_method != PaymentMethod.KHATA_CREDIT else 0.0,
+                        payment_method=pay_method,
+                        items=clean_items,
+                        credit_amount=amt_paid if pay_method == PaymentMethod.KHATA_CREDIT else 0.0,
+                        timestamp=datetime.utcnow(),
+                    )
         except Exception as e:
             logger.error(f"[VoiceKhataParser] Gemini fallback failed: {e}")
         return None

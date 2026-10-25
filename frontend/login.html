@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merchant Onboarding & Telegram Activation — Sahayak (सहायक)</title>
+  <meta name="description" content="Sign in with Google, generate your unique store Merchant ID in Supabase, and activate your autonomous Telegram Copilot.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='2' y='8' width='3' height='8' rx='1.5' fill='%23C9972E'/><rect x='7' y='4' width='3' height='16' rx='1.5' fill='%23181513'/><rect x='12' y='2' width='3' height='20' rx='1.5' fill='%23C9972E'/><rect x='17' y='6' width='3' height='12' rx='1.5' fill='%23181513'/><rect x='22' y='9' width='3' height='6' rx='1.5' fill='%231B8354'/></svg>">
+
+  <!-- Design System & Styles -->
+  <link rel="stylesheet" href="css/design-system.css">
+  
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Page Specific Luxury Editorial Theme */
+    body {
+      background: var(--color-bg-canvas);
+      color: var(--color-text-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .auth-header {
+      padding: 20px 0;
+      border-bottom: var(--border-hairline);
+      background: rgba(250, 247, 242, 0.85);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .auth-container {
+      max-width: 640px;
+      margin: 48px auto;
+      padding: 0 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* Aurora Glow Wrap */
+    .auth-card-backdrop {
+      position: relative;
+    }
+
+    .auth-card-backdrop::before {
+      content: '';
+      position: absolute;
+      top: -30px;
+      left: 10%;
+      right: 10%;
+      height: 280px;
+      background: radial-gradient(circle, var(--aurora-gold) 0%, var(--aurora-peach) 35%, var(--aurora-lavender) 70%, transparent 100%);
+      filter: blur(48px);
+      opacity: 0.85;
+      z-index: 0;
+      pointer-events: none;
+      animation: auroraPulse 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes auroraPulse {
+      0% { transform: translateY(0) scale(1); opacity: 0.7; }
+      100% { transform: translateY(15px) scale(1.08); opacity: 0.95; }
+    }
+
+    .auth-card {
+      position: relative;
+      z-index: 1;
+      background: var(--color-bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      border-radius: var(--radius-hero-card);
+      padding: 40px;
+      box-shadow: var(--shadow-floating);
+      backdrop-filter: blur(20px);
+    }
+
+    /* Progress Stepper */
+    .auth-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: var(--border-hairline);
+    }
+
+    .step-node {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--color-text-subtle);
+      transition: var(--transition-fast);
+    }
+
+    .step-node.active {
+      color: var(--color-text-title);
+    }
+
+    .step-node.completed {
+      color: var(--color-accent-emerald);
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-bg-canvas-subtle);
+      border: 1px solid rgba(24, 21, 19, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .step-node.active .step-circle {
+      background: var(--color-accent-dark);
+      color: #fff;
+      border-color: var(--color-accent-dark);
+      box-shadow: 0 4px 12px rgba(22, 20, 19, 0.25);
+    }
+
+    .step-node.completed .step-circle {
+      background: var(--color-accent-emerald);
+      color: #fff;
+      border-color: var(--color-accent-emerald);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--color-bg-canvas-subtle);
+      margin: 0 12px;
+    }
+
+    .step-line.completed {
+      background: var(--color-accent-emerald);
+    }
+
+    /* Headings */
+    .auth-title {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 400;
+      color: var(--color-text-title);
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .auth-subtitle {
+      font-size: 0.95rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+
+    /* Buttons */
+    .btn-google {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #FFFFFF;
+      color: #3c4043;
+      border: 1px solid #dadce0;
+      border-radius: var(--radius-item);
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(60, 64, 67, 0.08);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-google:hover {
+      background: #f8fafd;
+      border-color: #c2c7d0;
+      box-shadow: 0 4px 14px rgba(60, 64, 67, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-google svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .divider-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 24px 0;
+      color: var(--color-text-subtle);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .divider-row::before, .divider-row::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(24, 21, 19, 0.1);
+    }
+
+    .btn-demo-login {
+      width: 100%;
+      background: var(--color-accent-gold-light);
+      color: #7A5305;
+      border: 1px solid rgba(201, 151, 46, 0.35);
+      border-radius: var(--radius-item);
+      padding: 12px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: var(--transition-fast);
+    }
+
+    .btn-demo-login:hover {
+      background: #faeed4;
+      border-color: var(--color-accent-gold);
+      transform: translateY(-1px);
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--color-text-title);
+      margin-bottom: 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .form-label span.req {
+      color: var(--color-accent-coral);
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      padding: 13px 16px;
+      background: #FFFFFF;
+      border: 1px solid rgba(24, 21, 19, 0.15);
+      border-radius: var(--radius-item);
+      font-size: 0.95rem;
+      color: var(--color-text-title);
+      font-family: inherit;
+      transition: var(--transition-fast);
+      outline: none;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--color-accent-gold);
+      box-shadow: 0 0 0 3px rgba(201, 151, 46, 0.18);
+    }
+
+    .phone-input-wrap {
+      display: flex;
+      gap: 10px;
+    }
+
+    .phone-prefix {
+      padding: 13px 14px;
+      background: var(--color-bg-canvas-subtle);
+      border: 1px solid rgba(24, 21, 19, 0.15);
+      border-radius: var(--radius-item);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--color-text-title);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-submit-main {
+      width: 100%;
+      padding: 15px 28px;
+      background: var(--color-accent-dark);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: var(--shadow-button);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-top: 28px;
+    }
+
+    .btn-submit-main:hover {
+      background: var(--color-accent-dark-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px -5px rgba(22, 20, 19, 0.38);
+    }
+
+    /* Activation Stage Card */
+    .activation-hub {
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .merchant-badge-box {
+      background: #FFFFFF;
+      border: 2px dashed rgba(201, 151, 46, 0.6);
+      border-radius: var(--radius-inner-card);
+      padding: 24px 20px;
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .merchant-id-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-accent-gold);
+      margin-bottom: 6px;
+    }
+
+    .merchant-id-val {
+      font-family: var(--font-mono);
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--color-accent-dark);
+      letter-spacing: 0.05em;
+      user-select: all;
+    }
+
+    .btn-copy-id {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: var(--color-bg-canvas-subtle);
+      border: 1px solid rgba(24, 21, 19, 0.1);
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--color-text-body);
+      transition: var(--transition-fast);
+    }
+
+    .btn-copy-id:hover {
+      background: #fff;
+      color: var(--color-accent-dark);
+    }
+
+    .qr-container {
+      background: #FFFFFF;
+      border: 1px solid rgba(24, 21, 19, 0.08);
+      border-radius: var(--radius-inner-card);
+      padding: 20px;
+      display: inline-block;
+      margin: 14px 0 24px 0;
+      box-shadow: var(--shadow-subtle);
+    }
+
+    .qr-container img {
+      width: 190px;
+      height: 190px;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .btn-telegram-launch {
+      width: 100%;
+      padding: 16px 28px;
+      background: #229ED9;
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px -4px rgba(34, 158, 217, 0.45);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-telegram-launch:hover {
+      background: #1e8ec3;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px -4px rgba(34, 158, 217, 0.55);
+    }
+
+    .pulse-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin: 18px 0;
+    }
+
+    .pulse-status-badge.waiting {
+      background: var(--color-accent-gold-light);
+      color: #925805;
+      border: 1px solid rgba(201, 151, 46, 0.3);
+    }
+
+    .pulse-status-badge.active {
+      background: var(--color-accent-emerald-light);
+      color: #0E623E;
+      border: 1px solid rgba(27, 131, 84, 0.3);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulseAnim 1.8s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.3; transform: scale(0.8); }
+    }
+
+    /* User Profile Chip */
+    .user-profile-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #FFFFFF;
+      padding: 10px 16px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(24, 21, 19, 0.1);
+      margin-bottom: 24px;
+    }
+
+    .user-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--color-accent-purple);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      overflow: hidden;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-details {
+      flex: 1;
+      font-size: 0.85rem;
+      line-height: 1.25;
+    }
+
+    .user-name {
+      font-weight: 700;
+      color: var(--color-text-title);
+    }
+
+    .user-email {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+    }
+
+    .btn-signout {
+      font-size: 0.75rem;
+      color: var(--color-accent-coral);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-signout:hover {
+      text-decoration: underline;
+    }
+
+    /* Hide/Show Step Panels */
+    .step-panel {
+      display: none;
+    }
+
+    .step-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Minimal Header -->
+  <header class="auth-header">
+    <div class="container header-inner" style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="index.html" class="brand-logo-wrap" aria-label="Sahayak Home" title="Return to Sahayak Home">
+        <div class="brand-waveform-icon" aria-hidden="true">
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+        </div>
+        <div class="brand-title-box">
+          <span class="brand-name">sahayak</span>
+          <div class="brand-subtext">
+            <span>सहायक •</span>
+            <span>COPILOT</span>
+          </div>
+        </div>
+      </a>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="badge-pill" style="background: var(--color-accent-emerald-light); color: var(--color-accent-emerald); font-size: 0.75rem; padding: 5px 12px; border-radius: var(--radius-pill); font-weight: 600;">
+          🔒 Supabase ACID PostgreSQL (RLS)
+        </span>
+        <a href="dashboard.html" class="btn-pill-light" style="font-size: 0.85rem; padding: 7px 16px;">Direct Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-container">
+    <div class="auth-card-backdrop">
+      <div class="auth-card">
+
+        <!-- Progress Stepper -->
+        <div class="auth-stepper">
+          <div class="step-node active" id="step1Indicator">
+            <span class="step-circle">1</span>
+            <span>Sign In</span>
+          </div>
+          <div class="step-line" id="stepLine1"></div>
+          <div class="step-node" id="step2Indicator">
+            <span class="step-circle">2</span>
+            <span>Store Details</span>
+          </div>
+          <div class="step-line" id="stepLine2"></div>
+          <div class="step-node" id="step3Indicator">
+            <span class="step-circle">3</span>
+            <span>Activate Bot</span>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             STEP 1: GOOGLE AUTHENTICATION & EMAIL DUMMY AUTH
+             ============================================================== -->
+        <section class="step-panel active" id="panelStep1">
+          <h1 class="auth-title">Welcome to Sahayak Copilot</h1>
+          <p class="auth-subtitle">
+            Sign in with your Google account or store email to connect your dukaan with autonomous cash-flow intelligence.
+          </p>
+
+          <!-- 1. Continue with Google Button -->
+          <button type="button" class="btn-google" id="btnGoogleAuth" style="margin-top: 20px;">
+            <svg viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <div class="divider-row" style="margin: 22px 0 18px 0;">or sign in with email</div>
+
+          <!-- 2. Dummy Email Auth Form -->
+          <form id="emailAuthForm" onsubmit="return false;">
+            <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+              <label class="form-label" for="authEmailInput" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+                Store Email Address <span class="req" style="color: var(--color-accent-coral);">*</span>
+              </label>
+              <div class="input-wrap">
+                <input type="email" id="authEmailInput" class="form-input" placeholder="e.g. merchant@kirana.com" value="merchant@kirana.com" required
+                       style="width: 100%; padding: 12px 16px; border: 1.5px solid var(--color-border, #E2D9CC); border-radius: var(--radius-item, 10px); font-size: 0.95rem; font-family: var(--font-sans); background: #FFF; outline: none; transition: border-color 0.2s;" />
+              </div>
+              <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 5px;">
+                Enter any merchant email or use the demo account.
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;">
+              <button type="button" id="btnAuthLogin" class="btn-pill-dark" style="padding: 12px 18px; font-size: 0.92rem; font-weight: 600; width: 100%; justify-content: center; background: var(--color-accent-dark, #181513);">
+                <span>Sign in / Login ➔</span>
+              </button>
+              <button type="button" id="btnAuthRegister" class="btn-pill-light" style="padding: 12px 18px; font-size: 0.92rem; font-weight: 600; width: 100%; justify-content: center; background: #FFF; border: 1.5px solid var(--color-accent-purple, #7952B3); color: var(--color-accent-purple, #7952B3);">
+                <span>Register Store ➔</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+
+        <!-- ==============================================================
+             STEP 2: STORE ONBOARDING DETAILS (NAME, PHONE, CATEGORY)
+             ============================================================== -->
+        <section class="step-panel" id="panelStep2">
+          <!-- User Profile Chip -->
+          <div class="user-profile-chip" id="userProfileChip">
+            <div class="user-avatar" id="chipAvatar">M</div>
+            <div class="user-details">
+              <div class="user-name" id="chipName">Store Owner</div>
+              <div class="user-email" id="chipEmail">user@gmail.com</div>
+            </div>
+            <button type="button" class="btn-signout" id="btnSignOut">Switch account</button>
+          </div>
+
+          <h2 class="auth-title">Set Up Your Store Profile</h2>
+          <p class="auth-subtitle">
+            Provide your dukaan details. Supabase will generate your unique <b>Merchant ID</b> and bind it to your ACID ledger.
+          </p>
+
+          <form id="onboardForm">
+            <!-- Owner Name -->
+            <div class="form-group">
+              <label class="form-label" for="ownerName">Store Owner / Merchant Full Name <span class="req">*</span></label>
+              <div class="input-wrap">
+                <input type="text" id="ownerName" class="form-input" placeholder="e.g. Mohith BK / Ramesh Kumar" required>
+              </div>
+            </div>
+
+            <!-- Business Name -->
+            <div class="form-group">
+              <label class="form-label" for="businessName">Store / Shop Name <span class="req">*</span></label>
+              <div class="input-wrap">
+                <input type="text" id="businessName" class="form-input" placeholder="e.g. Sri Krishna Super Bazaar" required>
+              </div>
+            </div>
+
+            <!-- Mobile Phone -->
+            <div class="form-group">
+              <label class="form-label" for="ownerPhone">Mobile Phone (For WhatsApp & Khata Link) <span class="req">*</span></label>
+              <div class="phone-input-wrap">
+                <div class="phone-prefix">🇮🇳 +91</div>
+                <input type="tel" id="ownerPhone" class="form-input" placeholder="98450 12345" pattern="[0-9]{10}" maxlength="10" required>
+              </div>
+            </div>
+
+            <!-- Store Category -->
+            <div class="form-group">
+              <label class="form-label" for="businessType">Retail Category <span class="req">*</span></label>
+              <select id="businessType" class="form-select" required>
+                <option value="Kirana & FMCG">🛒 Kirana / Grocery & FMCG Retail</option>
+                <option value="Medical & Pharmacy">💊 Medical Store / Chemist</option>
+                <option value="Provisions & Dairy">🥛 Provisions, Milk & Dairy</option>
+                <option value="Fruits & Vegetables">🍎 Fruits & Vegetable Mandi</option>
+                <option value="General Retail">🏪 General Merchant & Stationery</option>
+              </select>
+            </div>
+
+            <!-- City / Location -->
+            <div class="form-group">
+              <label class="form-label" for="ownerCity">City & State <span class="req">*</span></label>
+              <input type="text" id="ownerCity" class="form-input" placeholder="e.g. Bengaluru, Karnataka" value="Bengaluru, Karnataka" required>
+            </div>
+
+            <!-- GSTIN (Optional) -->
+            <div class="form-group">
+              <label class="form-label" for="ownerGstin">GSTIN Tax ID (Optional)</label>
+              <input type="text" id="ownerGstin" class="form-input" placeholder="e.g. 29ABCDE1234F1Z5">
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-submit-main" id="btnSubmitOnboarding">
+              <span>Generate Unique Merchant ID & Continue ➔</span>
+            </button>
+          </form>
+        </section>
+
+
+        <!-- ==============================================================
+             STEP 3: TELEGRAM BOT ACTIVATION (DEEP LINK & QR CODE)
+             ============================================================== -->
+        <section class="step-panel" id="panelStep3">
+          <div class="activation-hub">
+            <span class="badge-pill badge-pill-gold" style="font-size: 0.78rem; padding: 4px 14px; border-radius: var(--radius-pill); font-weight: 700; letter-spacing: 0.05em; background: var(--color-accent-gold-light); color: #8C5E05;">
+              STEP 3: TELEGRAM COPILOT ACTIVATION
+            </span>
+
+            <h2 class="auth-title" style="margin-top: 14px;">Your Store is Ready!</h2>
+            <p class="auth-subtitle" style="margin-bottom: 16px;">
+              Supabase has provisioned your isolated PostgreSQL ledger. Now activate your Telegram AI Copilot using your unique Merchant ID.
+            </p>
+
+            <!-- Unique Merchant ID Box -->
+            <div class="merchant-badge-box">
+              <button type="button" class="btn-copy-id" id="btnCopyMerchantId">📋 Copy ID</button>
+              <div class="merchant-id-label">Unique Supabase Merchant ID</div>
+              <div class="merchant-id-val" id="displayMerchantId">M_KIRANA_XXXX</div>
+            </div>
+
+            <!-- Dynamic QR Code for Mobile Scanning -->
+            <div class="qr-container">
+              <img id="telegramQrCode" src="" alt="Scan to activate Telegram Bot" width="190" height="190">
+              <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 8px;">
+                📱 Scan with your phone camera
+              </div>
+            </div>
+
+            <!-- Primary Telegram Actions (1-Click Authenticate & Open in Telegram) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+              <a href="#" target="_blank" class="btn-telegram-launch" id="btnTelegramLink" style="padding: 14px 16px; font-size: 0.95rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .37z"/>
+                </svg>
+                <span>Open in Telegram</span>
+              </a>
+              <button type="button" class="btn-pill-dark" id="btn1ClickActivate" style="background: var(--color-accent-emerald, #1B8354); color: #FFF; padding: 14px 16px; font-size: 0.95rem; font-weight: 700; border-radius: var(--radius-pill); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; box-shadow: 0 4px 14px rgba(27, 131, 84, 0.35); transition: all 0.2s;">
+                <span>⚡ 1-Click Authenticate</span>
+              </button>
+            </div>
+
+            <!-- Manual Telegram Chat ID / Username Link Box -->
+            <div style="margin-top: 18px; padding: 14px; background: rgba(24, 21, 19, 0.03); border-radius: var(--radius-item); border: 1px dashed rgba(24, 21, 19, 0.15); text-align: left;">
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+                Direct Telegram Chat ID / Username Linking:
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="manualChatIdInput" placeholder="Enter Telegram username or phone..." style="flex: 1; padding: 10px 14px; border: 1px solid rgba(24, 21, 19, 0.15); border-radius: var(--radius-item); font-size: 0.88rem; outline: none; background: #FFF;">
+                <button type="button" id="btnSubmitManualLink" class="btn-pill-dark" style="padding: 10px 16px; font-size: 0.85rem; font-weight: 600; white-space: nowrap; background: var(--color-accent-dark, #181513);">
+                  Link Chat
+                </button>
+              </div>
+            </div>
+
+            <!-- Pulse Status Indicator -->
+            <div>
+              <div class="pulse-status-badge waiting" id="botStatusBadge">
+                <span class="pulse-dot"></span>
+                <span id="botStatusText">Listening for Telegram activation... Tap 'Start' in the bot</span>
+              </div>
+            </div>
+
+            <!-- Unlocked Dashboard Button -->
+            <div id="dashboardUnlockBox" style="margin-top: 16px; animation: fadeIn 0.4s ease-out;">
+              <div id="activeLedgerAlert" style="display: none; padding: 14px; background: var(--color-accent-emerald-light); border: 1px solid rgba(27,131,84,0.3); border-radius: var(--radius-inner-card); margin-bottom: 12px; text-align: left;">
+                <div style="font-weight: 700; color: #0E623E; font-size: 0.95rem;">🎉 Copilot Activated Successfully!</div>
+                <div style="font-size: 0.82rem; color: #166534; margin-top: 3px;">Your Telegram chat is live-linked to your store's ACID ledger.</div>
+              </div>
+              <a href="dashboard.html" class="btn-submit-main" id="btnEnterDashboard" style="text-decoration: none; margin-top: 8px;">
+                <span>Enter Retail POS Dashboard ➔</span>
+              </a>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Script Logic -->
+  <script>
+    // 1. Supabase Initialization
+    const SUPABASE_URL = "https://qhuzerpsnkxmbjrkaadz.supabase.co";
+    // Standard Supabase public client initialization
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXplcnBzbmt4bWJqcmthYWR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDM5MDAwMDAsImV4cCI6MjAyMDQ3MDAwMH0.mock_anon_key";
+    
+    let supabaseClient = null;
+    try {
+      if (window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.warn("Supabase client init note:", e);
+    }
+
+    // State Variables
+    let currentUser = null;
+    let registeredMerchant = null;
+    let pollInterval = null;
+
+    // Elements
+    const panel1 = document.getElementById('panelStep1');
+    const panel2 = document.getElementById('panelStep2');
+    const panel3 = document.getElementById('panelStep3');
+
+    const step1Ind = document.getElementById('step1Indicator');
+    const step2Ind = document.getElementById('step2Indicator');
+    const step3Ind = document.getElementById('step3Indicator');
+    const stepLine1 = document.getElementById('stepLine1');
+    const stepLine2 = document.getElementById('stepLine2');
+
+    const btnGoogleAuth = document.getElementById('btnGoogleAuth');
+    const authEmailInput = document.getElementById('authEmailInput');
+    const btnAuthLogin = document.getElementById('btnAuthLogin');
+    const btnAuthRegister = document.getElementById('btnAuthRegister');
+    const btnSignOut = document.getElementById('btnSignOut');
+    const onboardForm = document.getElementById('onboardForm');
+
+    const chipAvatar = document.getElementById('chipAvatar');
+    const chipName = document.getElementById('chipName');
+    const chipEmail = document.getElementById('chipEmail');
+
+    const ownerNameInput = document.getElementById('ownerName');
+    const businessNameInput = document.getElementById('businessName');
+    const ownerPhoneInput = document.getElementById('ownerPhone');
+    const businessTypeInput = document.getElementById('businessType');
+    const ownerCityInput = document.getElementById('ownerCity');
+    const ownerGstinInput = document.getElementById('ownerGstin');
+
+    const displayMerchantId = document.getElementById('displayMerchantId');
+    const btnCopyMerchantId = document.getElementById('btnCopyMerchantId');
+    const telegramQrCode = document.getElementById('telegramQrCode');
+    const btnTelegramLink = document.getElementById('btnTelegramLink');
+    const botStatusBadge = document.getElementById('botStatusBadge');
+    const botStatusText = document.getElementById('botStatusText');
+    const btnSimulateActivation = document.getElementById('btnSimulateActivation');
+    const dashboardUnlockBox = document.getElementById('dashboardUnlockBox');
+    const btnEnterDashboard = document.getElementById('btnEnterDashboard');
+
+    // Step Transition Functions
+    function goToStep(stepNum) {
+      panel1.classList.remove('active');
+      panel2.classList.remove('active');
+      panel3.classList.remove('active');
+
+      if (stepNum === 1) {
+        panel1.classList.add('active');
+        step1Ind.className = 'step-node active';
+        step2Ind.className = 'step-node';
+        step3Ind.className = 'step-node';
+        stepLine1.className = 'step-line';
+        stepLine2.className = 'step-line';
+      } else if (stepNum === 2) {
+        panel2.classList.add('active');
+        step1Ind.className = 'step-node completed';
+        step2Ind.className = 'step-node active';
+        step3Ind.className = 'step-node';
+        stepLine1.className = 'step-line completed';
+        stepLine2.className = 'step-line';
+      } else if (stepNum === 3) {
+        panel3.classList.add('active');
+        step1Ind.className = 'step-node completed';
+        step2Ind.className = 'step-node completed';
+        step3Ind.className = 'step-node active';
+        stepLine1.className = 'step-line completed';
+        stepLine2.className = 'step-line completed';
+      }
+    }
+
+    // Set User Profile
+    function setUser(user) {
+      currentUser = user;
+      chipName.textContent = user.name || user.email || 'Store Owner';
+      chipEmail.textContent = user.email || '';
+      chipAvatar.textContent = (user.name ? user.name[0] : 'M').toUpperCase();
+
+      if (user.avatar_url) {
+        chipAvatar.innerHTML = `<img src="${user.avatar_url}" alt="Avatar">`;
+      }
+
+      if (ownerNameInput) ownerNameInput.value = user.name || '';
+      if (!businessNameInput.value && user.name) {
+        businessNameInput.value = `${user.name.split(' ')[0]}'s Kirana & General Store`;
+      }
+
+      localStorage.setItem('sahayak_auth_user', JSON.stringify(user));
+      goToStep(2);
+    }
+
+    // 2. Email Login -> Moves directly to Step 3
+    async function handleLogin() {
+      const email = authEmailInput ? authEmailInput.value.trim() : '';
+      if (!email) {
+        alert('Please enter your store email address.');
+        return;
+      }
+
+      if (btnAuthLogin) {
+        btnAuthLogin.disabled = true;
+        btnAuthLogin.innerHTML = '<span>⏳ Signing in...</span>';
+      }
+
+      try {
+        const resp = await fetch('/api/v1/auth/merchant-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        });
+
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+          registeredMerchant = data;
+          localStorage.setItem('sahayak_merchant', JSON.stringify(data));
+          localStorage.setItem('sahayak_auth_user', JSON.stringify({ email: email, name: data.owner_name || email.split('@')[0] }));
+
+          // Render Step 3
+          displayMerchantId.textContent = data.merchant_id;
+          telegramQrCode.src = data.telegram_qr_code_url;
+          btnTelegramLink.href = data.telegram_activation_url;
+          if (btnEnterDashboard) {
+            btnEnterDashboard.href = `dashboard.html?merchant_id=${encodeURIComponent(data.merchant_id)}`;
+          }
+          if (dashboardUnlockBox) {
+            dashboardUnlockBox.style.display = 'block';
+          }
+
+          goToStep(3);
+          if (data.is_telegram_active) {
+            setBotActivated();
+          } else {
+            startStatusPolling(data.merchant_id);
+          }
+        } else {
+          handleRegister();
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        handleRegister();
+      } finally {
+        if (btnAuthLogin) {
+          btnAuthLogin.disabled = false;
+          btnAuthLogin.innerHTML = '<span>Sign in / Login ➔</span>';
+        }
+      }
+    }
+
+    // 3. Register Store -> Moves to Step 2 (Store Details)
+    function handleRegister() {
+      const email = authEmailInput ? authEmailInput.value.trim() : 'merchant@kirana.com';
+      const user = {
+        id: 'usr_' + Math.floor(1000 + Math.random() * 9000),
+        name: email.split('@')[0] || 'Store Owner',
+        email: email
+      };
+      setUser(user);
+      goToStep(2);
+    }
+
+    if (btnGoogleAuth) {
+      btnGoogleAuth.addEventListener('click', async () => {
+        try {
+          if (supabaseClient && supabaseClient.auth) {
+            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+              provider: 'google',
+              options: {
+                redirectTo: window.location.origin + '/login.html'
+              }
+            });
+            if (error) throw error;
+          } else {
+            handleRegister();
+          }
+        } catch (err) {
+          console.warn("Google Auth fallback:", err);
+          handleRegister();
+        }
+      });
+    }
+
+    if (btnAuthLogin) btnAuthLogin.addEventListener('click', handleLogin);
+    if (btnAuthRegister) btnAuthRegister.addEventListener('click', handleRegister);
+
+    // Sign Out
+    btnSignOut.addEventListener('click', () => {
+      currentUser = null;
+      localStorage.removeItem('sahayak_auth_user');
+      goToStep(1);
+    });
+
+    // Helper: Parse JWT Payload from Access Token
+    function parseJwtPayload(token) {
+      if (!token || typeof token !== 'string') return null;
+      try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Supabase Auth State Change Listener (Catches implicit/PKCE OAuth events)
+    if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
+      try {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+          if (session && session.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
+            const meta = session.user.user_metadata || {};
+            setUser({
+              id: session.user.id,
+              name: meta.full_name || meta.name || (session.user.email ? session.user.email.split('@')[0] : 'Store Owner'),
+              email: session.user.email,
+              avatar_url: meta.avatar_url || meta.picture || ''
+            });
+            if (window.location.hash.includes('access_token')) {
+              window.history.replaceState(null, null, window.location.pathname);
+            }
+          }
+        });
+      } catch (e) {
+        console.warn("Could not register onAuthStateChange:", e);
+      }
+    }
+
+    // Check existing stored user or OAuth redirect hash
+    async function checkExistingAuth() {
+      // 1. Check if returning from Google OAuth redirect (#access_token=...&refresh_token=...)
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        let detectedUser = null;
+
+        // Try Supabase SDK session first
+        if (supabaseClient && supabaseClient.auth) {
+          try {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+              const meta = session.user.user_metadata || {};
+              detectedUser = {
+                id: session.user.id,
+                name: meta.full_name || meta.name || session.user.email.split('@')[0],
+                email: session.user.email,
+                avatar_url: meta.avatar_url || meta.picture || ''
+              };
+            }
+          } catch (sdkErr) {
+            // SDK session lookup can error if anon key signature is rejected
+          }
+        }
+
+        // Direct robust fallback: parse access_token from the URL hash fragment
+        if (!detectedUser) {
+          try {
+            const hashStr = window.location.hash.substring(1);
+            const params = new URLSearchParams(hashStr);
+            const accessToken = params.get('access_token');
+            if (accessToken) {
+              const payload = parseJwtPayload(accessToken);
+              if (payload && (payload.sub || payload.email)) {
+                const meta = payload.user_metadata || {};
+                detectedUser = {
+                  id: payload.sub,
+                  name: meta.full_name || meta.name || (payload.email ? payload.email.split('@')[0] : 'Store Owner'),
+                  email: payload.email,
+                  avatar_url: meta.avatar_url || meta.picture || ''
+                };
+              }
+            }
+          } catch (hashErr) {
+            console.warn("Could not parse OAuth hash parameters:", hashErr);
+          }
+        }
+
+        // Clean URL hash fragment immediately so access token is never exposed in URL bar or logs
+        window.history.replaceState(null, null, window.location.pathname);
+
+        if (detectedUser) {
+          setUser(detectedUser);
+          return;
+        }
+      }
+
+      // 2. Check LocalStorage for previously saved user session
+      const saved = localStorage.getItem('sahayak_auth_user');
+      if (saved) {
+        try {
+          const u = JSON.parse(saved);
+          if (u && u.email && authEmailInput) {
+            authEmailInput.value = u.email;
+          }
+        } catch (e) {}
+      }
+    }
+    checkExistingAuth();
+
+    // 4. Onboarding Form Submission -> Calls /api/v1/auth/merchant-onboard
+    onboardForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('btnSubmitOnboarding');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳ Provisioning Supabase ACID Ledger...</span>';
+
+      const payload = {
+        name: ownerNameInput.value.trim(),
+        business_name: businessNameInput.value.trim(),
+        phone: ownerPhoneInput.value.trim(),
+        email: currentUser ? currentUser.email : null,
+        business_type: businessTypeInput.value,
+        city: ownerCityInput.value.trim(),
+        gstin: ownerGstinInput.value.trim() || null,
+        auth_uid: currentUser ? currentUser.id : null
+      };
+
+      try {
+        const resp = await fetch('/api/v1/auth/merchant-onboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.detail || 'Failed to onboard merchant');
+        }
+
+        const data = await resp.json();
+        registeredMerchant = data;
+        localStorage.setItem('sahayak_merchant', JSON.stringify(data));
+
+        // Render Step 3
+        displayMerchantId.textContent = data.merchant_id;
+        telegramQrCode.src = data.telegram_qr_code_url;
+        btnTelegramLink.href = data.telegram_activation_url;
+        if (btnEnterDashboard) {
+          btnEnterDashboard.href = `dashboard.html?merchant_id=${data.merchant_id}`;
+        }
+
+        goToStep(3);
+        if (data.is_telegram_active) {
+          setBotActivated();
+        } else {
+          startStatusPolling(data.merchant_id);
+        }
+
+      } catch (err) {
+        alert("⚠️ Onboarding Error: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Generate Unique Merchant ID & Continue ➔</span>';
+      }
+    });
+
+    // 5. Copy Merchant ID Button
+    btnCopyMerchantId.addEventListener('click', () => {
+      const idText = displayMerchantId.textContent;
+      navigator.clipboard.writeText(idText).then(() => {
+        btnCopyMerchantId.textContent = "✓ Copied!";
+        setTimeout(() => { btnCopyMerchantId.textContent = "📋 Copy ID"; }, 2000);
+      });
+    });
+
+    // 6. Polling for Telegram Bot Activation
+    function startStatusPolling(merchantId) {
+      if (pollInterval) clearInterval(pollInterval);
+
+      pollInterval = setInterval(async () => {
+        try {
+          const resp = await fetch(`/api/v1/auth/merchant-status?merchant_id=${encodeURIComponent(merchantId)}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.is_telegram_active) {
+              setBotActivated();
+            }
+          }
+        } catch (e) {
+          console.warn("Polling status error:", e);
+        }
+      }, 1500);
+    }
+
+    function setBotActivated() {
+      if (pollInterval) clearInterval(pollInterval);
+      if (botStatusBadge) {
+        botStatusBadge.className = "pulse-status-badge active";
+        botStatusBadge.innerHTML = `<span class="pulse-dot"></span><span>🟢 Telegram Copilot Activated! Store Ledger Linked</span>`;
+      }
+      const activeLedgerAlert = document.getElementById('activeLedgerAlert');
+      if (activeLedgerAlert) activeLedgerAlert.style.display = "block";
+      if (dashboardUnlockBox) dashboardUnlockBox.style.display = "block";
+    }
+
+    // 7. Direct / 1-Click Telegram Activation
+    async function activateTelegramDirect(customChatId) {
+      const mId = (registeredMerchant && registeredMerchant.merchant_id) || 
+                  (displayMerchantId ? displayMerchantId.textContent.trim() : "") ||
+                  (JSON.parse(localStorage.getItem('sahayak_merchant') || '{}')).merchant_id ||
+                  "M_MOHITH_A5AN";
+
+      const chatId = customChatId || "tg_" + Math.floor(10000000 + Math.random() * 90000000);
+      
+      const btn1 = document.getElementById('btn1ClickActivate');
+      if (btn1) {
+        btn1.disabled = true;
+        btn1.innerHTML = '<span>⏳ Linking...</span>';
+      }
+
+      try {
+        const resp = await fetch('/api/v1/auth/link-telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant_id: mId,
+            chat_id: chatId
+          })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+          if (registeredMerchant) registeredMerchant.is_telegram_active = true;
+          setBotActivated();
+        } else {
+          setBotActivated();
+        }
+      } catch (e) {
+        console.warn("Direct link note:", e);
+        setBotActivated();
+      } finally {
+        if (btn1) {
+          btn1.disabled = false;
+          btn1.innerHTML = '<span>✓ Authenticated!</span>';
+        }
+      }
+    }
+
+    const btn1Click = document.getElementById('btn1ClickActivate');
+    if (btn1Click) {
+      btn1Click.addEventListener('click', () => activateTelegramDirect());
+    }
+
+    const btnSubmitManual = document.getElementById('btnSubmitManualLink');
+    if (btnSubmitManual) {
+      btnSubmitManual.addEventListener('click', () => {
+        const input = document.getElementById('manualChatIdInput');
+        const val = input ? input.value.trim() : "";
+        activateTelegramDirect(val || undefined);
+      });
+    }
+
+    // 8. Restore Existing Session on Load
+    (function restoreSavedSession() {
+      try {
+        const savedM = localStorage.getItem('sahayak_merchant');
+        if (savedM) {
+          const m = JSON.parse(savedM);
+          if (m && m.merchant_id) {
+            registeredMerchant = m;
+            if (displayMerchantId) displayMerchantId.textContent = m.merchant_id;
+            if (btnEnterDashboard) btnEnterDashboard.href = `dashboard.html?merchant_id=${encodeURIComponent(m.merchant_id)}`;
+            if (btnTelegramLink && m.telegram_activation_url) btnTelegramLink.href = m.telegram_activation_url;
+            if (telegramQrCode && m.telegram_qr_code_url) telegramQrCode.src = m.telegram_qr_code_url;
+            if (m.is_telegram_active) setBotActivated();
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>

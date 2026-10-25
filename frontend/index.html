@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak (सहायक) — Autonomous Predictive Cash-Flow Copilot for 30 Million Indian Retailers</title>
+  <meta name="description" content="Autonomous Predictive Cash-Flow & Operational Copilot for 30 Million Indian Retailers. Problem Statement F-03: Voice Khata, Margin-Guard Price Shield, and Real-Time ACID Cash-Flow Intelligence.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='2' y='8' width='3' height='8' rx='1.5' fill='%23C9972E'/><rect x='7' y='4' width='3' height='16' rx='1.5' fill='%23181513'/><rect x='12' y='2' width='3' height='20' rx='1.5' fill='%23C9972E'/><rect x='17' y='6' width='3' height='12' rx='1.5' fill='%23181513'/><rect x='22' y='9' width='3' height='6' rx='1.5' fill='%231B8354'/></svg>">
+  
+  <!-- Design System & Styles -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Sticky Main Site Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <!-- Brand Waveform Logo Mark -->
+      <a href="#" class="brand-logo-wrap" aria-label="Sahayak Home">
+        <div class="brand-waveform-icon" aria-hidden="true">
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+          <span class="waveform-bar"></span>
+        </div>
+        <div class="brand-title-box">
+          <span class="brand-name">sahayak</span>
+          <span class="brand-subtext">सहायक • COPILOT</span>
+        </div>
+      </a>
+
+
+      <!-- Action Buttons -->
+      <div class="header-actions">
+        <a href="login.html" class="btn-pill-dark" id="navLoginBtn" style="background: var(--color-accent-gold); color: #181513; border: none; font-weight: 700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Merchant Login & Bot Activation
+        </a>
+        <a href="dashboard.html" class="btn-pill-dark" id="navDashboardBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: -2px;">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Retail Dashboard
+        </a>
+        <a href="#demoCard" class="btn-pill-light">Try Voice Demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ====================================================================
+         HERO SECTION (Matching Screenshot 1 Layout with Financial Curation)
+         ==================================================================== -->
+    <section class="hero-section" id="hero">
+      <div class="container">
+        
+        <div class="hero-pill-badge-wrap">
+          <span class="badge-pill badge-pill-gold">AUTONOMOUS PREDICTIVE CASH-FLOW COPILOT</span>
+        </div>
+
+        <div class="hero-text-wrap">
+          <h1 class="hero-title serif-headline">
+            Your Voice Runs<br>
+            <span class="serif-accent">Your Cash-Flow.</span>
+          </h1>
+          <p class="hero-description">
+            Speak for 5 seconds in Kannada, Hindi, or Hinglish. Instantly reconcile counter sales, track customer Udhaar credit, and protect shelf margins against wholesale distributor price spikes — no complex ERP, just your voice.
+          </p>
+        </div>
+
+        <!-- Ethereal Aurora Mesh Container (Warm Gold, Rose, Lilac & Mint) -->
+        <div class="aurora-container-wrap">
+          <div class="aurora-backdrop">
+            
+            <!-- Floating Frosted White Card -->
+            <div class="floating-veya-card" id="demoCard">
+              <h2 class="card-title serif-headline">Try Sahayak in 5 seconds</h2>
+              <p class="card-subtitle">No typing. No complex software. Just speak in your language.</p>
+
+              <!-- Dynamic Multi-Layer Sine Wave Canvas (Financial Harmonics) -->
+              <div class="waveform-canvas-wrap">
+                <canvas id="waveformCanvas" width="540" height="120"></canvas>
+              </div>
+
+              <!-- Center Interactive Microphone Button -->
+              <div class="mic-button-wrap">
+                <button type="button" id="mainMicBtn" class="mic-btn-main" aria-label="Tap to speak in vernacular language">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
+                </button>
+                <div id="micLabelAction" class="mic-label-action">Tap to speak (Kannada / Hindi / Hinglish)</div>
+                <div class="mic-security-note">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                  </svg>
+                  <span>Strict Double-Entry ACID Ledger • SHA-256 Idempotency Lock</span>
+                </div>
+              </div>
+
+              <!-- Retail Vernacular Voice Note Presets -->
+              <div class="sample-selector-wrap" id="voice-khata">
+                <div class="sample-selector-label">Test Vernacular Perception Scenarios</div>
+                <div class="sample-selector-bar">
+                  <button type="button" class="sample-pill-btn active" data-profile="kannada_khata">
+                    🎙️ Kannada Khata: "ರಮೇಶ್ ಅವರಿಗೆ 500 ಸಾಲ"
+                  </button>
+                  <button type="button" class="sample-pill-btn" data-profile="hinglish_pos">
+                    ⚡ Hinglish POS: "Paytm pe 300 aaya, 2 tel diya"
+                  </button>
+                  <button type="button" class="sample-pill-btn" data-profile="distributor_spike">
+                    📈 Price Spike: "Sharma bill mustard oil ₹140 ➔ ₹147"
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Sleek Bottom Audio Player Scrubber Bar -->
+            <div class="bottom-player-bar" aria-label="Audio sample playback">
+              <button type="button" id="playerPlayBtn" class="player-play-btn" aria-label="Play sample audio note">
+                <svg viewBox="0 0 24 24">
+                  <polygon points="5,3 19,12 5,21"></polygon>
+                </svg>
+              </button>
+              <div class="player-track-wrap" title="Click to seek">
+                <div id="playerProgressFill" class="player-progress-fill"></div>
+              </div>
+              <div id="playerTimeBadge" class="player-time-badge">0:00 / 0:05</div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         HOW IT WORKS SECTION (Matching Screenshot 2 Layout with Financial Content)
+         ==================================================================== -->
+    <section class="how-it-works-section" id="how-it-works">
+      <div class="container">
+        <!-- Section Badge -->
+        <div class="section-badge-wrap">
+          <span class="badge-pill">HOW IT WORKS</span>
+        </div>
+
+        <!-- Headline & Subtitle -->
+        <h2 class="section-title serif-headline">From Voice to Ledger.</h2>
+        <p class="section-subtitle">
+          Three friction-free steps transforming ambient counter chatter and paper bills into deterministic ACID financial intelligence.
+        </p>
+
+        <!-- 3-Step Horizontal Timeline Grid with Custom Financial Line-Art SVGs -->
+        <div class="steps-timeline-grid">
+          
+          <!-- Step 1: Perception -->
+          <article class="step-card">
+            <div class="step-icon-container" aria-hidden="true">
+              <!-- Minimalist Line Art Microphone with Bill Photo Outline -->
+              <svg viewBox="0 0 100 100">
+                <!-- Outer mic capsule -->
+                <rect x="36" y="16" width="28" height="42" rx="14" />
+                <!-- Grille lines -->
+                <line x1="44" y1="26" x2="56" y2="26" />
+                <line x1="44" y1="33" x2="56" y2="33" />
+                <line x1="44" y1="40" x2="56" y2="40" />
+                <!-- Cradle arc -->
+                <path d="M26 38 C 26 56, 74 56, 74 38" />
+                <!-- Stand stem -->
+                <line x1="50" y1="58" x2="50" y2="74" />
+                <!-- Ambient counter voice sound loop -->
+                <path d="M18 78 Q 28 84 38 74 T 50 74 T 62 74 Q 72 84 82 78" />
+              </svg>
+            </div>
+            <span class="step-badge">STEP 01 • PERCEPTION</span>
+            <h3 class="step-title">Speak or Snap</h3>
+            <p class="step-description">
+              Shopkeepers speak naturally in Kannada, Hindi, or Hinglish via Telegram/WhatsApp, or snap a photo of a crumpled distributor bill.
+            </p>
+          </article>
+
+          <!-- Connector 1 -->
+          <div class="step-connector" aria-hidden="true">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Step 2: System 1 Reflex -->
+          <article class="step-card">
+            <div class="step-icon-container" aria-hidden="true">
+              <!-- Minimalist Line Art Circular Waveform Signature with Router Nodes -->
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="34" />
+                <!-- Intent frequency wave -->
+                <path d="M12 50 Q 24 50 32 54 T 40 40 T 48 64 T 56 34 T 64 58 T 72 48" />
+                <!-- Sub-LLM <18ms classifier ticks -->
+                <line x1="68" y1="44" x2="68" y2="56" />
+                <line x1="74" y1="48" x2="74" y2="52" />
+              </svg>
+            </div>
+            <span class="step-badge">STEP 02 • SYSTEM 1 REFLEX</span>
+            <h3 class="step-title">Jev & Gemini Router</h3>
+            <p class="step-description">
+              System 1 Jev classifies intent in &lt;18ms ($0 cost) while Gemini 1.5 Flash Vision decodes 9-pin dot-matrix distributor bills.
+            </p>
+          </article>
+
+          <!-- Connector 2 -->
+          <div class="step-connector" aria-hidden="true">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Step 3: Margin Shield & Ledger Action -->
+          <article class="step-card">
+            <div class="step-icon-container" aria-hidden="true">
+              <!-- Minimalist Line Art Hand Cradling Rupee Shield -->
+              <svg viewBox="0 0 100 100">
+                <!-- Radiant security rays -->
+                <line x1="66" y1="20" x2="66" y2="15" />
+                <line x1="56" y1="24" x2="52" y2="20" />
+                <line x1="76" y1="24" x2="80" y2="20" />
+                <!-- Rupee check shield -->
+                <circle cx="66" cy="32" r="12" />
+                <!-- Rupee symbol check -->
+                <path d="M62 30 H 70 M 62 33 H 68 M 65 33 C 67 33 67 36 65 37 L 69 41" stroke-width="1.2" />
+                <!-- Elegant hand cradle -->
+                <path d="M18 78 Q 24 74 30 76 Q 42 66 54 66 L 70 66 Q 80 66 88 56 Q 82 50 72 54 L 56 56 Q 40 56 30 68 Q 24 74 18 78" />
+              </svg>
+            </div>
+            <span class="step-badge">STEP 03 • DETERMINISTIC CORE</span>
+            <h3 class="step-title">Margin Shield & ACID</h3>
+            <p class="step-description">
+              Auto-commits to double-entry SQL ledgers, locks FIFO inventory, and fires instant WhatsApp Margin-Guard alerts to protect profits.
+            </p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PROBLEM STATEMENT F-03 & INTERACTIVE MARGIN-GUARD SIMULATOR
+         ==================================================================== -->
+    <section class="problem-solution-section" id="problem">
+      <div class="container">
+        
+        <div style="text-align: center;">
+          <div class="section-badge-wrap">
+            <span class="badge-pill badge-pill-gold">TARGET PROBLEM STATEMENT: F-03</span>
+          </div>
+          <h2 class="section-title serif-headline">The 3 Fatal Traps for 30M Kiranas.</h2>
+          <p class="section-subtitle">
+            Small retailers don't fail from lack of hustle. They fail from silent margin leakage, invisible credit lockups, and disconnected payment soundboxes.
+          </p>
+        </div>
+
+        <!-- 3 Problem Cards -->
+        <div class="problem-cards-grid">
+          
+          <div class="problem-card">
+            <div class="problem-card-icon">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+              </svg>
+            </div>
+            <h3 class="problem-card-title">The Payment-Basket Gap</h3>
+            <p class="problem-card-desc">
+              When a soundbox rings <em>"Paytm pe ₹300 prapt hue"</em>, it emits zero SKU data. Did the customer buy 2 bottles of oil or clear previous Udhaar? Without itemization, FIFO inventory cannot decrement.
+            </p>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon">
+              <svg viewBox="0 0 24 24">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+            </div>
+            <h3 class="problem-card-title">Silent Margin Erosion</h3>
+            <p class="problem-card-desc">
+              Distributors print wholesale invoices on faded 9-pin dot-matrix paper. Cost price increases of 3% to 8% go unnoticed at morning rush, eroding retail profit margins before prices can be adjusted.
+            </p>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="problem-card-title">The 10:15 PM Blindspot</h3>
+            <p class="problem-card-desc">
+              Store owners pull down shutters at night without knowing their real 14-day net cash position. Upcoming supplier cheque dates collide with uncollected customer Udhaar, causing severe liquidity crunches.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Interactive Margin-Guard Simulator -->
+        <div class="margin-simulator-card" id="margin-guard">
+          <div class="sim-header">
+            <div>
+              <span class="badge-pill badge-pill-emerald">AGENT 3 • MARGIN-GUARD ENGINE</span>
+              <h3 class="serif-headline" style="font-size: 1.8rem; margin-top: 8px;">Interactive Price-Spike Shield</h3>
+            </div>
+            <div class="mono-tag" style="color: var(--color-text-muted);">
+              Trigger: ΔPrice &gt; 3% ➔ Auto-MRP Calibration
+            </div>
+          </div>
+
+          <div class="sim-controls-grid">
+            <!-- Controls -->
+            <div>
+              <div class="slider-group">
+                <div class="slider-label-row">
+                  <span>Previous Wholesale Rate (Per Unit)</span>
+                  <span id="valOldPrice" class="mono-tag">₹140.00</span>
+                </div>
+                <input type="range" id="simOldPrice" class="custom-range" min="50" max="300" step="1" value="140">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label-row">
+                  <span>New Distributor Rate (Paper Bill)</span>
+                  <span id="valNewPrice" class="mono-tag" style="color: #E3536C;">₹147.00</span>
+                </div>
+                <input type="range" id="simNewPrice" class="custom-range" min="50" max="350" step="1" value="147">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-label-row">
+                  <span>Target Merchant Margin %</span>
+                  <span id="valTargetMargin" class="mono-tag">10%</span>
+                </div>
+                <input type="range" id="simTargetMargin" class="custom-range" min="5" max="30" step="1" value="10">
+              </div>
+
+              <div style="font-size: 0.78rem; color: var(--color-text-muted); font-family: var(--font-mono); margin-top: 14px;">
+                Formula: New MRP = New Unit Rate × (1 + Target Margin %)
+              </div>
+            </div>
+
+            <!-- Output Box with WhatsApp Preview -->
+            <div class="sim-output-box">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
+                <div>
+                  <div style="font-size: 0.78rem; color: var(--color-text-muted); text-transform: uppercase;">Wholesale Price Spike</div>
+                  <div id="outDeltaPct" style="font-family: var(--font-serif); font-size: 2.2rem; font-weight: 500; color: #E3536C;">+5.0%</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.78rem; color: var(--color-text-muted); text-transform: uppercase;">Protected Retail MRP</div>
+                  <div id="outNewMrp" style="font-family: var(--font-serif); font-size: 2.2rem; font-weight: 500; color: #1B8354;">₹162</div>
+                </div>
+              </div>
+
+              <!-- WhatsApp Outbound Alert Bubble -->
+              <div class="whatsapp-mock-bubble" id="simWhatsappAlert">
+                <strong>⚠️ Margin-Guard WhatsApp Alert:</strong><br>
+                Fortune Oil wholesale cost rose by <strong>₹7 (₹140 ➔ ₹147)</strong>. Raise shelf price to <strong>₹162</strong> to protect your <strong>10% margin</strong>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         THE 6 AUTONOMOUS AGENTS ARCHITECTURE MATRIX
+         ==================================================================== -->
+    <section class="agents-section" id="agents">
+      <div class="container">
+        
+        <div style="text-align: center;">
+          <div class="section-badge-wrap">
+            <span class="badge-pill">BLACKBOARD FABRIC</span>
+          </div>
+          <h2 class="section-title serif-headline">The 6 Autonomous Financial Agents.</h2>
+          <p class="section-subtitle">
+            Coordinated over Redis 7.2 streams with strict double-entry SQL constraints and PostgreSQL Row-Level Security (RLS).
+          </p>
+        </div>
+
+        <div class="agents-grid">
+          
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 1</span>
+              <h3 class="agent-title">Voice Khata & Receivables</h3>
+              <p class="agent-desc">
+                Converts colloquial voice notes (<em>"Sharma ji 500 udhaar"</em>) into verified customer credit ledgers. Automatically dispatches vernacular WhatsApp payment receipts.
+              </p>
+            </div>
+            <div class="agent-footer">Perception: Sarvam Saaras AI</div>
+          </div>
+
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 2</span>
+              <h3 class="agent-title">Paper Bill Digitizer</h3>
+              <p class="agent-desc">
+                Decodes noisy, oil-stained, dot-matrix wholesale bills in &lt;15 seconds using Gemini 1.5 Flash Spatial Vision with strict arithmetic sanity guardrails.
+              </p>
+            </div>
+            <div class="agent-footer">Vision: Gemini 1.5 Flash + OpenCV</div>
+          </div>
+
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 3</span>
+              <h3 class="agent-title">Margin-Guard Price Shield</h3>
+              <p class="agent-desc">
+                Calculates unit cost deltas on SQL invoice insertion. Fired instantly whenever wholesale cost spikes by &gt;3%, suggesting calibrated shelf MRPs.
+              </p>
+            </div>
+            <div class="agent-footer">Deterministic SQL Triggers</div>
+          </div>
+
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 4</span>
+              <h3 class="agent-title">FIFO & Dead-Capital Hunter</h3>
+              <p class="agent-desc">
+                Executes concurrency-safe row-level batch decrementing on counter checkout. Flags stagnant inventory tying up working capital before expiry.
+              </p>
+            </div>
+            <div class="agent-footer">Concurrency: SELECT FOR UPDATE</div>
+          </div>
+
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 5</span>
+              <h3 class="agent-title">Predictive Liquidity Simulator</h3>
+              <p class="agent-desc">
+                Simulates 14-day and 30-day cash-flow trajectories against upcoming supplier dues and projected customer repayments. Prevents cheque bounces.
+              </p>
+            </div>
+            <div class="agent-footer">What-If Monte Carlo Liquidity Engine</div>
+          </div>
+
+          <div class="agent-card">
+            <div>
+              <span class="agent-number">AGENT 6</span>
+              <h3 class="agent-title">10:15 PM Closing Storyteller</h3>
+              <p class="agent-desc">
+                Dispatches a nightly 45-second vernacular WhatsApp audio note summarizing the day's cash collection, pending supplier dues, and tomorrow's liquidity forecast.
+              </p>
+            </div>
+            <div class="agent-footer">Egress: WhatsApp Cloud Voice API</div>
+          </div>
+
+        </div>
+
+        <div style="text-align: center; margin-top: 48px;">
+          <button type="button" id="previewContractBtn" class="btn-pill-light">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Inspect Frozen Pydantic Contract & Ledger</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ====================================================================
+       REAL-TIME CONTRACT & LEDGER INSPECTOR MODAL
+       ==================================================================== -->
+  <div class="modal-backdrop" id="diagnosticModal" role="dialog" aria-modal="true" aria-labelledby="modalIntent">
+    <div class="diagnostic-modal-card">
+      <button type="button" id="modalCloseBtn" class="modal-close-btn" aria-label="Close modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="modal-header">
+        <span class="badge-pill">SYSTEM 1 JEV ROUTER & ACID CORE</span>
+        <h2 id="modalIntent" class="serif-headline" style="font-size: 2rem; margin-top: 10px;">VOICE_KHATA</h2>
+        <div id="modalTimestamp" class="mono-tag" style="color: var(--color-text-muted); font-size: 0.75rem; margin-top: 4px;">
+          Processed in 12.4ms • SHA-256 Idempotency Lock OK • Session RLS Active
+        </div>
+      </div>
+
+      <!-- Raw Voice Perception Box -->
+      <div style="background: #FAF7F2; border-radius: 16px; padding: 16px 20px; margin-bottom: 20px; border: 1px solid rgba(24, 21, 19, 0.06);">
+        <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Vernacular Acoustic Input</div>
+        <div id="modalRawSpeech" style="font-family: var(--font-serif); font-size: 1.35rem; color: var(--color-text-title); margin-top: 4px;">
+          "ರಮೇಶ್ ಅವರಿಗೆ 500 ರೂಪಾಯಿ ಸಾಲ"
+        </div>
+        <div id="modalNormalizedText" style="font-size: 0.85rem; color: var(--color-accent-purple); font-weight: 500; margin-top: 4px;">
+          Normalized: Ramesh credit rupees 500 (kn-IN)
+        </div>
+      </div>
+
+      <!-- Execution Score Box -->
+      <div class="score-hero-box" style="margin-bottom: 20px;">
+        <div>
+          <div style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase;">Transaction Amount</div>
+          <div id="modalMonetaryValue" class="score-number" style="font-size: 2.4rem;">₹500.00</div>
+        </div>
+        <div style="text-align: right;">
+          <div id="modalStatusBadge" class="score-badge-status">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background: currentColor;"></span>
+            <span id="modalStatusText">ACID Ledger Committed</span>
+          </div>
+          <div id="modalLatencyValue" class="mono-tag" style="margin-top: 6px; color: var(--color-text-muted);">12.4ms ($0.000)</div>
+        </div>
+      </div>
+
+      <!-- Double-Entry SQL Entries -->
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-title); margin-bottom: 8px;">
+          Deterministic Double-Entry Ledger (ACID)
+        </div>
+        <div id="modalAcidEntries"></div>
+      </div>
+
+      <!-- Frozen Pydantic JSON Payload -->
+      <div>
+        <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-title);">
+          Frozen Interface Contract (`app/core/contracts.py`)
+        </div>
+        <pre class="contract-code-block" id="modalJsonPayload"></pre>
+      </div>
+
+      <!-- Outbound WhatsApp Confirmation -->
+      <div class="recommendations-box">
+        <div class="recommendations-title">Outbound WhatsApp Dispatch Preview</div>
+        <p id="modalWhatsappPreview" class="recommendations-text" style="font-family: var(--font-sans);">
+          ನಮಸ್ಕಾರ ರಮೇಶ್ ಅವರೆ, ನಿಮ್ಮ ಖಾತೆಗೆ ₹500 ಸಾಲ ದಾಖಲಾಗಿದೆ. ಇಂದಿನ ಒಟ್ಟು ಬಾಕಿ: ₹1,450.00. - ಶಾಪ್ ಮಾಲೀಕ
+        </p>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" class="btn-pill-light" onclick="window.print()">Export Audit Log</button>
+        <button type="button" class="btn-pill-dark" onclick="document.getElementById('modalCloseBtn').click()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       FOOTER
+       ==================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="brand-logo-wrap">
+          <div class="brand-waveform-icon" aria-hidden="true">
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar" style="background-color: var(--color-accent-gold);"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+          </div>
+          <div class="brand-title-box">
+            <span class="brand-name">sahayak</span>
+            <span class="brand-subtext">सहायक • FINANCIAL COPILOT</span>
+          </div>
+        </div>
+
+        <div>
+          <a href="dashboard.html" class="btn-pill-dark" style="font-size: 0.85rem; padding: 9px 20px;">
+            Open Retail POS Dashboard ➔
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © 2026 Sahayak (सहायक) Technologies • Problem Statement F-03 Target Solution
+        </div>
+        <div style="display: flex; gap: 18px;">
+          <span>PostgreSQL 16 ACID Core</span>
+          <span>Row-Level Security (RLS)</span>
+          <span>Sarvam Saaras STT</span>
+          <span>System 1 Jev Router</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/audio-visualizer.js"></script>
+  <script src="js/biomarkers.js"></script>
+  <script src="js/voice-recorder.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

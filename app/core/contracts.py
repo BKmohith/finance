@@ -111,6 +111,7 @@ class VoiceKhataIntent(BaseModel):
     action: str = Field(description="GIVE_CREDIT (Udhaar diya) or COLLECT_PAYMENT (Udhaar chukaya)")
     transcription: str
     confidence: float = Field(default=0.95, ge=0.0, le=1.0)
+    customer_phone: Optional[str] = Field(default=None, description="Optional customer 10-digit mobile number")
 
 
 # --- 7. FIFO Depletion Task Payload (Processed by Laptop 2) ---
@@ -127,6 +128,8 @@ class InboundIntentClass(str, Enum):
     COUNTER_SALE = "COUNTER_SALE"       # Process sale + FIFO depletion
     VOICE_KHATA = "VOICE_KHATA"         # Agent 1 customer credit update
     INVOICE_BILL = "INVOICE_BILL"       # Phase 1 wholesale bill OCR
+    CASH_FORECAST = "CASH_FORECAST"     # Agent 5 Real-Time Cash Forecast & Runway
+    BUSINESS_QUERY = "BUSINESS_QUERY"   # SQL Explainer & Customer Dossier Analytics Agent
 
 
 CELERY_COUNTER_TASK_NAME = "workers.process_counter_sale"

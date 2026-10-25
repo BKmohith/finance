@@ -29,6 +29,11 @@ Key Instructions:
    - line_total: Net total for this line.
 5. Decode dot-matrix typography, faint printer ribbons, regional formats, and handwritten numbers accurately.
 6. Provide a confidence_score between 0.0 and 1.0 reflecting visual clarity.
+7. NON-INVOICE REJECTION: If this image is NOT a commercial invoice, wholesale paper bill, cash memo, or delivery challan (e.g. an ID card, portrait, or paper without itemized prices):
+   - Leave items empty: items = []
+   - Set grand_total = 0.0
+   - Set confidence_score = 0.0
+   - Set supplier_name = "NON_INVOICE"
 """
 
 
@@ -61,6 +66,11 @@ def get_genai_client(api_key: Optional[str] = None) -> genai.Client:
         api_key=key,
         http_options=types.HttpOptions(timeout=30000),
     )
+
+
+class NonInvoiceDocumentError(ValueError):
+    """Raised when an image does not contain a commercial invoice or paper bill."""
+    pass
 
 
 def extract_invoice_from_image(
@@ -107,10 +117,20 @@ def extract_invoice_from_image(
             )
 
             if response and response.text:
-                return ExtractedInvoiceData.model_validate_json(response.text)
+                extracted = ExtractedInvoiceData.model_validate_json(response.text)
+                # Guardrail: Abort if no line items, zero grand total, or flagged non-invoice
+                if len(extracted.items) == 0 or extracted.grand_total <= 0.0:
+                    raise NonInvoiceDocumentError("Image does not contain commercial line items or billing amounts.")
+                if extracted.confidence_score < 0.3:
+                    raise NonInvoiceDocumentError(f"Confidence score ({extracted.confidence_score}) is too low for an invoice.")
+                if extracted.supplier_name.upper() == "NON_INVOICE":
+                    raise NonInvoiceDocumentError("Image was identified as a non-invoice document.")
+                return extracted
 
             raise RuntimeError(f"Model {model} returned an empty response.")
 
+        except NonInvoiceDocumentError:
+            raise
         except Exception as exc:
             logger.warning("Extraction attempt with %s failed: %s. Trying next model...", model, exc)
             last_error = exc

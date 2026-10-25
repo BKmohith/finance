@@ -236,3 +236,118 @@ def test_price_shield_outbound_alert():
         data = response.json()
         assert data["status"] == "PROCESSED"
         assert data["percentage_hike"] == 5.0
+
+
+# ============================================================================
+# 6. Unregistered Chat Gatekeeper & Tenant Isolation Tests
+# ============================================================================
+def test_telegram_webhook_unregistered_user_blocked():
+    """Unregistered Telegram chats must be blocked immediately from using bot services."""
+    unregistered_payload = {
+        "update_id": 9995,
+        "message": {
+            "message_id": 201,
+            "chat": {"id": 999111222, "type": "private"},
+            "date": 1719234000,
+            "text": "What is my shelf stock?"
+        }
+    }
+
+    with patch("app.api.routes.send_telegram_text") as mock_send_reply:
+        resp = client.post("/webhook/telegram", json=unregistered_payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ACCESS_DENIED_UNREGISTERED"
+        mock_send_reply.assert_called_once()
+        sent_text = mock_send_reply.call_args[0][1]
+        assert "Access Denied: Unregistered Store Account" in sent_text
+
+
+def test_telegram_webhook_registration_linking_and_unlinking():
+    """Merchants link their Telegram using their unique Merchant ID, and are strictly tenant-isolated."""
+    from app.db.session import SessionLocal
+    from app.db.models import Merchant
+    from sqlalchemy import select
+
+    test_chat = 777666555
+    test_m_id = "M_TEST_STORE_ISOLATED"
+
+    # Create test merchant in DB
+    with SessionLocal() as session:
+        existing = session.execute(select(Merchant).where(Merchant.id == test_m_id)).scalar_one_or_none()
+        if not existing:
+            m = Merchant(
+                id=test_m_id,
+                name="Isolated Kirana Store",
+                phone="+919999900001",
+                city="Bengaluru"
+            )
+            session.add(m)
+            session.commit()
+
+    # Step 1: Link account via /link
+    link_payload = {
+        "update_id": 9996,
+        "message": {
+            "message_id": 202,
+            "chat": {"id": test_chat, "type": "private"},
+            "date": 1719234000,
+            "text": f"/link {test_m_id}"
+        }
+    }
+    with patch("app.api.routes.send_telegram_text") as mock_send_reply:
+        resp = client.post("/webhook/telegram", json=link_payload)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "LINKED"
+        mock_send_reply.assert_called_once()
+        assert "Store Account Connected!" in mock_send_reply.call_args[0][1]
+
+    # Step 2: Now that chat is linked, bill upload routes to this merchant's isolated tenant
+    photo_payload = {
+        "update_id": 9997,
+        "message": {
+            "message_id": 203,
+            "chat": {"id": test_chat, "type": "private"},
+            "date": 1719234000,
+            "photo": [
+                {"file_id": "isolated_photo_1", "file_unique_id": "uniq_iso_1", "file_size": 25000}
+            ]
+        }
+    }
+    with patch("app.api.routes.celery_client.send_task") as mock_celery, \
+         patch("app.api.routes.send_telegram_text"):
+        resp = client.post("/webhook/telegram", json=photo_payload)
+        assert resp.status_code == 200
+        assert resp.json()["merchant_id"] == test_m_id
+
+    # Step 3: Unlink account
+    unlink_payload = {
+        "update_id": 9998,
+        "message": {
+            "message_id": 204,
+            "chat": {"id": test_chat, "type": "private"},
+            "date": 1719234000,
+            "text": "/unlink"
+        }
+    }
+    with patch("app.api.routes.send_telegram_text"):
+        resp = client.post("/webhook/telegram", json=unlink_payload)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "UNLINKED"
+
+    # Step 4: After unlinking, user is blocked again
+    blocked_payload = {
+        "update_id": 9999,
+        "message": {
+            "message_id": 205,
+            "chat": {"id": test_chat, "type": "private"},
+            "date": 1719234000,
+            "text": "/stock"
+        }
+    }
+    with patch("app.api.routes.send_telegram_text") as mock_send_reply:
+        resp = client.post("/webhook/telegram", json=blocked_payload)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ACCESS_DENIED_UNREGISTERED"
+        assert "Access Denied: Unregistered Store Account" in mock_send_reply.call_args[0][1]
+

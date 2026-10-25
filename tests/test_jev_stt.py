@@ -68,6 +68,13 @@ def test_jev_router_intent_routing():
     assert classify_inbound_intent("Tax Invoice No 4210 GSTIN") == InboundIntentClass.INVOICE_BILL
     assert classify_inbound_intent(media_mime_type="image/jpeg") == InboundIntentClass.INVOICE_BILL
 
+    # Agent 5: Cash Forecast & Runway (English, Hinglish & Kannada)
+    assert classify_inbound_intent("kitna paisa bachega agle hafte") == InboundIntentClass.CASH_FORECAST
+    assert classify_inbound_intent("forecast") == InboundIntentClass.CASH_FORECAST
+    assert classify_inbound_intent("runway") == InboundIntentClass.CASH_FORECAST
+    assert classify_inbound_intent("ಮುಂದಿನ ವಾರ ಹಣ ಉಳಿಯುತ್ತಾ") == InboundIntentClass.CASH_FORECAST
+    assert classify_inbound_intent("cash crunch alert check") == InboundIntentClass.CASH_FORECAST
+
 
 # ============================================================================
 # 2. Vernacular Speech-to-Text (Sarvam AI / Kannada) Tests
@@ -140,6 +147,18 @@ def test_voice_khata_repayment_extraction():
     assert intent.customer_name == "Gupta ji"
     assert intent.amount == 1000.0
     assert intent.action == "COLLECT_PAYMENT"
+
+
+def test_voice_khata_with_phone_number_extraction():
+    """Verifies parsing of customer credit with name and 10-digit mobile phone number."""
+    credit_text = "Sharma ji 9876543210 500 udhaar"
+    intent = parse_voice_khata(credit_text)
+
+    assert intent is not None
+    assert intent.customer_name == "Sharma ji"
+    assert intent.amount == 500.0
+    assert intent.action == "GIVE_CREDIT"
+    assert intent.customer_phone == "+919876543210"
 
 
 def test_voice_khata_counter_sale_extraction():

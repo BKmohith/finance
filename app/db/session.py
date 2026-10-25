@@ -16,8 +16,8 @@ engine = create_engine(
     pool_recycle=300
 )
 
-# Standard session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Standard session factory (expire_on_commit=False prevents DetachedInstanceError on model reads)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 # Declarative base for ORM models
 Base = declarative_base()

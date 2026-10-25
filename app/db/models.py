@@ -22,11 +22,23 @@ class Merchant(Base):
     name = Column(String(128), nullable=False)
     phone = Column(String(20), unique=True, nullable=False, index=True)
     gstin = Column(String(30), nullable=True)
+    telegram_chat_id = Column(String(64), nullable=True, index=True)
+    email = Column(String(128), nullable=True)
+    business_type = Column(String(64), nullable=True)
+    city = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
     suppliers = relationship("Supplier", back_populates="merchant", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="merchant", cascade="all, delete-orphan")
+
+    @property
+    def business_name(self) -> str:
+        return self.name
+
+    @business_name.setter
+    def business_name(self, value: str):
+        self.name = value
 
 
 class Supplier(Base):
@@ -64,6 +76,18 @@ class Invoice(Base):
     merchant = relationship("Merchant", back_populates="invoices")
     supplier = relationship("Supplier", back_populates="invoices")
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
+
+    @property
+    def total_amount(self) -> float:
+        return self.grand_total
+
+    @total_amount.setter
+    def total_amount(self, value: float):
+        self.grand_total = value
+
+    @property
+    def supplier_name(self) -> str:
+        return self.supplier.name if self.supplier else "Distributor"
 
     __table_args__ = (
         Index("idx_invoice_merchant_due", "merchant_id", "credit_due_date"),

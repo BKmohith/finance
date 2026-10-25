@@ -164,14 +164,14 @@ class AlertNotifier:
         client: Optional[httpx.Client] = None
     ) -> Dict[str, Any]:
         """
-        Dispatches alert based on configured channel (Telegram or WhatsApp).
+        Dispatches alert based on configured channel (Telegram or Meta WhatsApp).
         """
         if settings.NOTIFICATION_CHANNEL == "telegram":
-            # Use merchant_phone as chat_id or merchant_id
             target_id = alert.merchant_phone or alert.merchant_id
             if target_id:
                 target_id = str(target_id).replace("M_TG_", "").strip()
             return self.send_telegram_alert(target_id, alert, client=client)
+
         return self.send_whatsapp_alert(alert, client=client)
 
 

@@ -68,9 +68,88 @@ async def receive_telegram_webhook(request: Request):
 
     photos = message.get("photo", [])
     document = message.get("document")
-
     voice = message.get("voice")
     audio = message.get("audio")
+    user_text = message.get("text", "").strip()
+
+    # ----------------------------------------------------
+    # Registration Check & Gatekeeper
+    # ----------------------------------------------------
+    from app.db.repository import (
+        get_registered_merchant_for_chat,
+        link_chat_to_merchant,
+        unlink_chat_from_merchant
+    )
+
+    merchant_info = get_registered_merchant_for_chat(chat_id)
+
+    # Check linking commands: /start M_..., /link M_..., /activate M_..., or M_...
+    is_link_cmd = False
+    target_m_id = None
+    if user_text:
+        parts = user_text.split()
+        cmd = parts[0].lower()
+        if cmd in ("/start", "/link", "/activate", "/register") and len(parts) > 1:
+            is_link_cmd = True
+            target_m_id = parts[1].strip()
+        elif cmd.startswith(("/start_", "/link_")):
+            is_link_cmd = True
+            target_m_id = cmd.split("_", 1)[1].strip()
+        elif user_text.startswith("M_") and len(parts) == 1:
+            is_link_cmd = True
+            target_m_id = user_text.strip()
+
+    if is_link_cmd and target_m_id:
+        linked_merchant = link_chat_to_merchant(chat_id, target_m_id)
+        if linked_merchant:
+            welcome_msg = (
+                f"🎉 *Store Account Connected!*\n\n"
+                f"🏪 *Store:* {linked_merchant['name']}\n"
+                f"🆔 *Merchant ID:* `{linked_merchant['id']}`\n"
+                f"📍 *Location:* {linked_merchant.get('city') or 'Bengaluru'}\n"
+                f"🔒 *Ledger Security:* 100% Private ACID Store Ledger Active\n\n"
+                f"Welcome! Only you can view or manage this store's listings and Khata."
+            )
+            send_telegram_text(chat_id, welcome_msg)
+            return {"status": "LINKED", "merchant_id": linked_merchant["id"]}
+        else:
+            err_msg = (
+                f"❌ *Invalid Merchant ID*\n\n"
+                f"We couldn't find any registered store with ID `{target_m_id}`.\n\n"
+                f"👉 Please register your store first at: http://localhost:8000/login.html\n"
+                f"Once registered, send: `/link <YOUR_MERCHANT_ID>`"
+            )
+            send_telegram_text(chat_id, err_msg)
+            return {"status": "INVALID_MERCHANT_ID"}
+
+    if user_text == "/unlink":
+        if merchant_info:
+            unlink_chat_from_merchant(chat_id)
+            send_telegram_text(
+                chat_id,
+                "🔓 *Store Account Unlinked.*\nYour Telegram account has been disconnected from your store.\nTo reconnect, send `/link <YOUR_MERCHANT_ID>`."
+            )
+        else:
+            send_telegram_text(chat_id, "ℹ️ You are not currently linked to any store.")
+        return {"status": "UNLINKED"}
+
+    # Gatekeeper: Block unregistered chats immediately
+    if not merchant_info:
+        access_denied_msg = (
+            "⛔ *Access Denied: Unregistered Store Account*\n\n"
+            "This bot is exclusively for registered Sahayak Retail merchants. Your Telegram account is not linked to any store.\n\n"
+            "📋 *How to Get Access:*\n"
+            "1️⃣ Register your store on our portal:\n"
+            "    👉 http://localhost:8000/login.html\n"
+            "2️⃣ Complete Google Login & enter store details\n"
+            "3️⃣ Copy your unique *Merchant ID* (e.g. `M_KRISHNA_7B2F`)\n"
+            "4️⃣ Send `/link <YOUR_MERCHANT_ID>` in this chat to activate."
+        )
+        send_telegram_text(chat_id, access_denied_msg)
+        return {"status": "ACCESS_DENIED_UNREGISTERED"}
+
+    # If registered, resolve tenant merchant_id
+    merchant_id = merchant_info["id"]
 
     # If it's a photo or image document
     if photos:
@@ -93,11 +172,10 @@ async def receive_telegram_webhook(request: Request):
         return {"status": "ACK", "message": "Voice note received", "media_id": file_id}
     else:
         # Text only message
-        user_text = message.get("text", "").strip()
         if user_text.startswith("/start") or user_text.startswith("/help"):
             reply_text = (
-                "🙏 *Namaste! Welcome to Sahayak (सहायक)*\n\n"
-                "I am your Autonomous Retail Copilot for Indian Kirana Stores.\n\n"
+                "✨ *Namaste! Welcome to Sahayak (सहायक)*\n\n"
+                "I am your Autonomous Business Copilot for Small Businesses.\n\n"
                 "📸 *1. Wholesale Bills:* Snap any distributor bill to digitize line items & activate Margin-Guard.\n"
                 "🎙️ *2. Voice Notes:* Speak in Hindi, Kannada, or Hinglish: *'Sharma ji 500 udhaar'*.\n"
                 "💵 *3. Counter Sales:* `Paytm 300 Oil 2` or `/sale 300 Fortune 2`.\n"
@@ -106,7 +184,6 @@ async def receive_telegram_webhook(request: Request):
             send_telegram_text(chat_id, reply_text)
         return {"status": "ACK", "message": "Non-media update acknowledged"}
 
-    merchant_id = f"M_TG_{chat_id}"
     sender_phone = str(chat_id)
     message_id = f"tg_{message.get('message_id')}"
 
@@ -129,6 +206,25 @@ async def receive_telegram_webhook(request: Request):
             "cache_key": cache_key,
             "latency_ms": round(elapsed_ms, 2)
         }
+
+    # --- Entry-Point Gatekeeper: Verify Invoice vs Random Image ---
+    try:
+        from app.main import download_telegram_file
+        from app.services.image_gatekeeper import classify_image_document
+        img_bytes = await download_telegram_file(media_id)
+        if img_bytes:
+            gate_res = classify_image_document(img_bytes)
+            if not gate_res.is_invoice:
+                logger.info(f"Webhook dropped non-invoice image: doc_type={gate_res.document_type}, reason={gate_res.reason}")
+                send_telegram_text(chat_id, gate_res.rejection_message)
+                return {
+                    "status": "DROPPED_NON_INVOICE",
+                    "merchant_id": merchant_id,
+                    "document_type": gate_res.document_type,
+                    "reason": gate_res.reason
+                }
+    except Exception as gate_err:
+        logger.warning(f"Webhook entry gatekeeper inspection warning: {gate_err}")
 
     # --- Dispatch to Celery ---
     try:
@@ -158,18 +254,67 @@ async def receive_telegram_webhook(request: Request):
     }
 
 
-def send_telegram_text(chat_id: int | str, text: str):
-    """Helper to send instant reply to Telegram user."""
+def send_telegram_text(chat_id: int | str, text: str) -> Optional[int]:
+    """Helper to send instant reply to Telegram user. Returns message_id if successful."""
     if not settings.TELEGRAM_BOT_TOKEN or settings.TELEGRAM_BOT_TOKEN.startswith("mock_"):
-        return
+        return None
     url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
     clean_id = str(chat_id).replace("M_TG_", "").strip()
     try:
-        resp = httpx.post(url, json={"chat_id": clean_id, "text": text, "parse_mode": "Markdown"}, timeout=5.0)
-        if resp.status_code != 200:
-            httpx.post(url, json={"chat_id": clean_id, "text": text}, timeout=5.0)
+        resp = httpx.post(url, json={"chat_id": clean_id, "text": text, "parse_mode": "Markdown"}, timeout=15.0)
+        if resp.status_code == 200:
+            return resp.json().get("result", {}).get("message_id")
+        logger.warning(f"Telegram Markdown send returned {resp.status_code}: {resp.text}. Retrying plain text fallback...")
+        fallback_resp = httpx.post(url, json={"chat_id": clean_id, "text": text}, timeout=15.0)
+        if fallback_resp.status_code == 200:
+            return fallback_resp.json().get("result", {}).get("message_id")
+        logger.error(f"Telegram fallback send failed ({fallback_resp.status_code}): {fallback_resp.text}")
     except Exception as e:
         logger.warning(f"Could not send Telegram reply: {e}")
+    return None
+
+
+def edit_telegram_text(chat_id: int | str, message_id: int, text: str) -> bool:
+    """Helper to edit an existing Telegram message in-place without generating a new notification."""
+    if not settings.TELEGRAM_BOT_TOKEN or settings.TELEGRAM_BOT_TOKEN.startswith("mock_") or not message_id:
+        return False
+    url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
+    clean_id = str(chat_id).replace("M_TG_", "").strip()
+    try:
+        resp = httpx.post(
+            url,
+            json={"chat_id": clean_id, "message_id": message_id, "text": text, "parse_mode": "Markdown"},
+            timeout=15.0
+        )
+        if resp.status_code == 200:
+            return True
+        logger.warning(f"Telegram editMessageText Markdown returned {resp.status_code}: {resp.text}. Retrying plain text fallback...")
+        fallback_resp = httpx.post(
+            url,
+            json={"chat_id": clean_id, "message_id": message_id, "text": text},
+            timeout=15.0
+        )
+        return fallback_resp.status_code == 200
+    except Exception as e:
+        logger.warning(f"Could not edit Telegram message {message_id}: {e}")
+        return False
+
+
+def send_telegram_chat_action(chat_id: int | str, action: str = "typing") -> bool:
+    """
+    Triggers Telegram top-bar action status (e.g. 'typing', 'upload_document').
+    Provides native immediate visual feedback that the bot is processing.
+    """
+    if not settings.TELEGRAM_BOT_TOKEN or settings.TELEGRAM_BOT_TOKEN.startswith("mock_"):
+        return False
+    url = f"{settings.TELEGRAM_API_BASE}/bot{settings.TELEGRAM_BOT_TOKEN}/sendChatAction"
+    clean_id = str(chat_id).replace("M_TG_", "").strip()
+    try:
+        resp = httpx.post(url, json={"chat_id": clean_id, "action": action}, timeout=5.0)
+        return resp.status_code == 200
+    except Exception as e:
+        logger.debug(f"Could not send Telegram chat action '{action}': {e}")
+        return False
 
 
 # ============================================================================
@@ -261,7 +406,132 @@ async def receive_whatsapp_webhook(
 
 
 # ============================================================================
-# 3. Price-Shield Outbound Alert Trigger
+# 3. Twilio WhatsApp Inbound Webhook (Zero Facebook Dependency)
+# ============================================================================
+@router.get("/webhook/twilio/whatsapp", tags=["Twilio WhatsApp"])
+async def twilio_whatsapp_status():
+    """Twilio WhatsApp webhook status & verification endpoint."""
+    return {
+        "status": "ready",
+        "service": "Sahayak Twilio WhatsApp Gateway",
+        "sender": settings.TWILIO_WHATSAPP_NUMBER,
+        "supported_features": [
+            "Counter sales & FIFO inventory depletion",
+            "Low stock & heading out of stock alerts",
+            "Customer Khata store credit (Udhaar baaki)",
+            "Wholesale bill photo scanning & Margin-Guard",
+            "Vernacular voice notes & speech transcription",
+            "Quick commands: /stock, /khata, /simulate, /help"
+        ]
+    }
+
+
+@router.post("/webhook/twilio/whatsapp", tags=["Twilio WhatsApp"])
+async def receive_twilio_whatsapp_webhook(request: Request):
+    """
+    Twilio WhatsApp Inbound Webhook Handler.
+    Receives incoming WhatsApp messages (text, photos, audio clips) from Twilio.
+    Processes the request through the unified BotService and returns TwiML XML.
+    """
+    import asyncio
+    from twilio.twiml.messaging_response import MessagingResponse
+    from app.services.bot_service import (
+        handle_text_message,
+        handle_voice_bytes,
+        handle_bill_image_bytes,
+    )
+
+    content_type = request.headers.get("content-type", "")
+    from_number = ""
+    to_number = ""
+    body = ""
+    num_media = 0
+    media_url = None
+    media_content_type = None
+
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        form = await request.form()
+        from_number = str(form.get("From", ""))
+        to_number = str(form.get("To", ""))
+        body = str(form.get("Body", "")).strip()
+        num_media = int(form.get("NumMedia", 0) or 0)
+        media_url = form.get("MediaUrl0")
+        media_content_type = form.get("MediaContentType0")
+    else:
+        try:
+            payload = await request.json()
+            from_number = str(payload.get("From", ""))
+            to_number = str(payload.get("To", ""))
+            body = str(payload.get("Body", "")).strip()
+            num_media = int(payload.get("NumMedia", 0) or 0)
+            media_url = payload.get("MediaUrl0")
+            media_content_type = payload.get("MediaContentType0")
+        except Exception:
+            from_number = str(request.query_params.get("From", ""))
+            body = str(request.query_params.get("Body", "")).strip()
+
+    clean_phone = from_number.replace("whatsapp:", "").replace("+", "").strip()
+
+    # Link Mohith's phone number to his primary store account (or create dedicated WA merchant)
+    if clean_phone in ("917338142740", "7338142740"):
+        merchant_id = "M_TG_5821612449"
+    elif clean_phone:
+        merchant_id = f"M_WA_{clean_phone}"
+    else:
+        merchant_id = "M_DEMO_KIRANA"
+
+    reply_text = ""
+
+    # 1. Media handling (Bill photos or Voice notes)
+    if num_media > 0 and media_url:
+        try:
+            auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ACCOUNT_SID else None
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, auth=auth) as http_client:
+                media_resp = await http_client.get(media_url)
+                media_bytes = media_resp.content
+
+            m_type = str(media_content_type or "").lower()
+            if m_type.startswith("image/"):
+                reply_text = await asyncio.to_thread(
+                    handle_bill_image_bytes,
+                    merchant_id=merchant_id,
+                    image_bytes=media_bytes,
+                    filename="whatsapp_bill.jpg",
+                    sender_phone=clean_phone
+                )
+            elif m_type.startswith("audio/"):
+                reply_text = await asyncio.to_thread(
+                    handle_voice_bytes,
+                    merchant_id=merchant_id,
+                    audio_bytes=media_bytes,
+                    filename="whatsapp_voice.ogg"
+                )
+            else:
+                reply_text = f"📎 Received attachment ({m_type}). Send a photo of a wholesale bill or a voice note!"
+        except Exception as media_err:
+            logger.error(f"Error handling Twilio WhatsApp media: {media_err}", exc_info=True)
+            reply_text = f"⚠️ Could not process attached media: {media_err}"
+    else:
+        # 2. Text command, counter sale, or Khata
+        try:
+            reply_text = await asyncio.to_thread(
+                handle_text_message,
+                merchant_id=merchant_id,
+                user_text=body,
+                sender_phone=clean_phone
+            )
+        except Exception as text_err:
+            logger.error(f"Error handling Twilio WhatsApp text: {text_err}", exc_info=True)
+            reply_text = f"⚠️ Error processing request: {text_err}"
+
+    # Return standard TwiML response (Delivers directly to user's WhatsApp)
+    twiml_resp = MessagingResponse()
+    twiml_resp.message(reply_text)
+    return Response(content=str(twiml_resp), media_type="text/xml")
+
+
+# ============================================================================
+# 4. Price-Shield Outbound Alert Trigger
 # ============================================================================
 @router.post("/api/alerts/price-shield", tags=["Price Shield"])
 async def trigger_price_shield_alert(alert: PriceHikeAlert):
