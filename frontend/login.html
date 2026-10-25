@@ -791,7 +791,7 @@
     // 1. Supabase Initialization
     const SUPABASE_URL = "https://qhuzerpsnkxmbjrkaadz.supabase.co";
     // Standard Supabase public client initialization
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXplcnBzbmt4bWJqcmthYWR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDM5MDAwMDAsImV4cCI6MjAyMDQ3MDAwMH0.mock_anon_key";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodXplcnBzbmt4bWJqcmthYWR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NDI1MzEsImV4cCI6MjEwODQxODUzMX0.n5szDYX--QuEvfF88bqBXV6KiTR1NvvNnUd5gfgrylc";
     
     let supabaseClient = null;
     try {
@@ -1116,6 +1116,29 @@
         if (detectedUser) {
           setUser(detectedUser);
           return;
+        }
+      }
+
+      // 1b. Check if returning from Google OAuth PKCE flow (?code=...)
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      if (urlSearchParams.has('code') && supabaseClient && supabaseClient.auth) {
+        try {
+          const authCode = urlSearchParams.get('code');
+          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(authCode);
+          if (data && data.session && data.session.user) {
+            const meta = data.session.user.user_metadata || {};
+            const detectedUser = {
+              id: data.session.user.id,
+              name: meta.full_name || meta.name || (data.session.user.email ? data.session.user.email.split('@')[0] : 'Store Owner'),
+              email: data.session.user.email,
+              avatar_url: meta.avatar_url || meta.picture || ''
+            };
+            window.history.replaceState(null, null, window.location.pathname);
+            setUser(detectedUser);
+            return;
+          }
+        } catch (codeErr) {
+          console.warn("Could not exchange OAuth code for session:", codeErr);
         }
       }
 
