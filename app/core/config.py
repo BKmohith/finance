@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     META_GRAPH_API_VERSION: str = "v19.0"
 
     # --- Sarvam AI Speech Engine ---
-    SARVAM_API_KEY: Optional[str] = "sk_apba05ii_xikxfuEvwXbot88r0t4CLxRF"
+    SARVAM_API_KEY: Optional[str] = None
 
 
     # --- Cache, Deduplication & Queue ---
