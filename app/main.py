@@ -638,6 +638,14 @@ if os.path.exists(FRONTEND_DIR):
     async def serve_frontend_dashboard_html():
         return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
 
+    @app.get("/report", tags=["Frontend"], response_class=FileResponse)
+    async def serve_frontend_report():
+        return FileResponse(os.path.join(FRONTEND_DIR, "report.html"))
+
+    @app.get("/report.html", tags=["Frontend"], response_class=FileResponse)
+    async def serve_frontend_report_html():
+        return FileResponse(os.path.join(FRONTEND_DIR, "report.html"))
+
 
 
 if __name__ == "__main__":
