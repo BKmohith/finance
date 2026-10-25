@@ -39,11 +39,13 @@
       </a>
 
       <!-- Live Store Identity Badge & Clock -->
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <div class="store-live-badge" id="storeLiveBadge">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div class="store-live-badge" id="storeLiveBadge" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;" title="Click to view store accounts or switch active store">
           <span class="live-pulse-dot"></span>
           <span id="storeIdentityText">Store Ledger Active</span>
+          <span style="font-size: 0.72rem; opacity: 0.7; margin-left: 2px;">▼</span>
         </div>
+        <div id="telegramStatusPill" style="display: inline-flex; align-items: center;"></div>
         <!-- Placed in place of pm IST to update Counter Inflow & Distributor Payables -->
         <button type="button" id="btnEditMetricsHeader" class="btn-header-metrics-edit"
           title="Update Today's Counter Inflow & Distributor Payables">
@@ -1033,6 +1035,63 @@
           <button type="submit" id="btnSaveEditInv" class="btn-pill-dark">Save Invoice</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 5: SWITCH ACTIVE STORE & TELEGRAM SYNC
+       ==================================================================== -->
+  <div id="modalStoreSwitcher" class="sale-toast-overlay" role="dialog" aria-modal="true" style="display: none;">
+    <div class="sale-success-card" style="text-align: left; max-width: 480px; width: 95%;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <h3 style="font-family: var(--font-serif); font-size: 1.4rem; color: var(--color-text-title); margin: 0;">
+          🏪 Store Account &amp; Telegram Sync
+        </h3>
+        <button type="button" id="btnCloseStoreSwitcher" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--color-text-muted); line-height: 1;">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 16px;">
+        Switch between merchant stores or verify your Telegram bot connection.
+      </p>
+
+      <!-- Active Store Status Banner -->
+      <div id="switcherCurrentStoreCard" style="background: #FAF7F2; border: 1.5px solid rgba(201, 151, 46, 0.35); border-radius: var(--radius-item); padding: 14px; margin-bottom: 16px;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--color-accent-gold); letter-spacing: 0.05em;">Currently Active Store</div>
+        <div id="switcherCurrentStoreName" style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-title); margin-top: 2px;">Store Loading...</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+          <span id="switcherCurrentStoreId" class="mono-tag" style="font-size: 0.82rem; font-weight: 700; color: var(--color-accent-purple);">#STORE_ID</span>
+          <span id="switcherTelegramStatus" style="font-size: 0.8rem; font-weight: 600;">⚡ Telegram Status</span>
+        </div>
+      </div>
+
+      <!-- Quick Switch Recent Stores -->
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--color-text-title); margin-bottom: 8px;">
+          Registered Stores:
+        </label>
+        <div id="switcherStoresList" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Custom Store ID Switch Input -->
+      <form id="switcherManualForm" onsubmit="return false;" style="border-top: 1px solid var(--color-border); padding-top: 14px;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-title); margin-bottom: 6px;">
+          Or Enter Any Store ID / Mobile Number:
+        </label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="switcherInputStoreId" placeholder="e.g. M_MOHITH_6DWS"
+            style="flex: 1; padding: 10px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-item); font-size: 0.9rem; font-family: var(--font-mono); background: #FFF;" />
+          <button type="button" id="btnApplyStoreSwitch" class="btn-pill-dark" style="white-space: nowrap;">
+            Switch Store
+          </button>
+        </div>
+      </form>
+
+      <!-- Telegram Bot Command Helper -->
+      <div style="margin-top: 14px; padding: 12px 14px; background: rgba(36, 161, 222, 0.08); border: 1px solid rgba(36, 161, 222, 0.2); border-radius: 8px; font-size: 0.82rem; color: #0088cc; line-height: 1.45;">
+        <div style="font-weight: 700; margin-bottom: 4px;">📱 Telegram Bot Connection:</div>
+        In Telegram (<a href="https://t.me/sahayak_retail_bot" target="_blank" style="color: #0088cc; font-weight: 700; text-decoration: underline;">@sahayak_retail_bot</a>), send your Store ID <code id="switcherTgCmd" style="background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; font-weight: 700;">#STORE_ID</code> to link your Telegram account. Any invoice photo you upload will immediately appear in this dashboard!
+      </div>
     </div>
   </div>
 

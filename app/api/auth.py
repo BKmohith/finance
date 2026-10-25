@@ -248,6 +248,31 @@ def get_merchant_status(merchant_id: str = Query(..., description="Unique Mercha
         }
 
 
+@auth_router.get("/merchants")
+def list_merchants():
+    """
+    Returns list of stores/merchants in the system to power instant switching and Telegram linking.
+    """
+    with SessionLocal() as session:
+        stores = session.execute(
+            select(Merchant).order_by(Merchant.created_at.desc()).limit(20)
+        ).scalars().all()
+        return {
+            "status": "success",
+            "merchants": [
+                {
+                    "id": m.id,
+                    "name": m.name,
+                    "phone": m.phone,
+                    "city": m.city,
+                    "is_telegram_active": bool(m.telegram_chat_id),
+                    "telegram_chat_id": m.telegram_chat_id
+                }
+                for m in stores
+            ]
+        }
+
+
 @auth_router.post("/link-telegram")
 def link_telegram(payload: LinkTelegramRequest):
     """

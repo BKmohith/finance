@@ -29,10 +29,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved) merchantData = JSON.parse(saved);
   } catch (e) { }
 
-  // Determine active merchant ID
+  // If merchant_id was provided in query string, persist it immediately so reloads/navigation stick
+  if (merchantId) {
+    if (!merchantData || merchantData.merchant_id !== merchantId) {
+      merchantData = Object.assign({}, merchantData || {}, { merchant_id: merchantId });
+      try {
+        localStorage.setItem('sahayak_merchant', JSON.stringify(merchantData));
+      } catch (e) { }
+    }
+  }
+
+  // Determine active merchant ID (defaults to primary linked store M_MOHITH_6DWS if unset)
   let activeMerchantId = merchantId || (merchantData ? merchantData.merchant_id : '');
   if (!activeMerchantId) {
-    activeMerchantId = 'M_NEW_MERCHANT';
+    activeMerchantId = 'M_MOHITH_6DWS';
   }
   let latestPayablesList = [];
 
@@ -52,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mid = data ? data.merchant_id : activeMerchantId;
     let bName = data ? data.business_name : (merchantData ? merchantData.business_name : '');
     let city = data ? data.city : (merchantData ? merchantData.city : 'Bengaluru');
+    const isTg = data ? data.is_telegram_active : (merchantData ? merchantData.is_telegram_active : false);
 
     if (!bName) {
       bName = isDemoAccount ? "Mohith's Kirana & General Store" : "Store Ledger Active";
@@ -62,6 +73,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (navTag) {
       navTag.textContent = mid;
+    }
+
+    // Update Telegram Status Pill in Header
+    const tgPill = document.getElementById('telegramStatusPill');
+    if (tgPill) {
+      if (isTg) {
+        tgPill.innerHTML = `
+          <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(36, 161, 222, 0.12); color: #0088cc; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(36, 161, 222, 0.25);" title="Telegram Bot Connected (@sahayak_retail_bot). Click to manage.">
+            <span style="font-size: 0.85rem;">⚡</span> Telegram Synced
+          </span>
+        `;
+      } else {
+        tgPill.innerHTML = `
+          <span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(201, 151, 46, 0.12); color: #9A6F14; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(201, 151, 46, 0.3);" title="Click to connect Telegram Bot (@sahayak_retail_bot)">
+            <span style="font-size: 0.85rem;">📱</span> Link Telegram
+          </span>
+        `;
+      }
+      tgPill.onclick = () => window.openStoreSwitcherModal && window.openStoreSwitcherModal();
+    }
+
+    if (data && data.merchant_id) {
+      try {
+        localStorage.setItem('sahayak_merchant', JSON.stringify({
+          merchant_id: data.merchant_id,
+          business_name: bName,
+          city: city,
+          is_telegram_active: !!data.is_telegram_active
+        }));
+      } catch (e) { }
     }
   }
 
@@ -486,6 +527,20 @@ document.addEventListener('DOMContentLoaded', () => {
     liveMetrics = kpis;
     activeDebtorsList = data.debtors || [];
     latestPayablesList = data.payables || [];
+
+    // Sync database payables, inventory, debtors into localStorage cache for instant persistence
+    if (data.payables && Array.isArray(data.payables)) {
+      saveStoredPayables(data.payables);
+    }
+    if (data.inventory && Array.isArray(data.inventory)) {
+      saveStoredInventory(data.inventory);
+    }
+    if (data.debtors && Array.isArray(data.debtors)) {
+      saveStoredDebtors(data.debtors);
+    }
+    if (data.kpis) {
+      saveStoredMetrics(data.kpis);
+    }
 
     // Update KPI Card 1: Today's Inflow
     const kpiInflow = document.getElementById('kpiTodayInflow');
@@ -2671,6 +2726,124 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         loadLiveDashboardMetrics();
       }
+    });
+  }
+
+  // --- E. STORE SWITCHER & TELEGRAM LINK MODAL ---
+  const storeLiveBadge = document.getElementById('storeLiveBadge');
+  const modalStoreSwitcher = document.getElementById('modalStoreSwitcher');
+  const btnCloseStoreSwitcher = document.getElementById('btnCloseStoreSwitcher');
+  const switcherCurrentStoreName = document.getElementById('switcherCurrentStoreName');
+  const switcherCurrentStoreId = document.getElementById('switcherCurrentStoreId');
+  const switcherTelegramStatus = document.getElementById('switcherTelegramStatus');
+  const switcherStoresList = document.getElementById('switcherStoresList');
+  const switcherInputStoreId = document.getElementById('switcherInputStoreId');
+  const btnApplyStoreSwitch = document.getElementById('btnApplyStoreSwitch');
+  const switcherTgCmd = document.getElementById('switcherTgCmd');
+
+  function openStoreSwitcherModal() {
+    if (!modalStoreSwitcher) return;
+    modalStoreSwitcher.style.display = 'flex';
+
+    const bName = (merchantData && merchantData.business_name) || "Store Ledger Active";
+    const isTg = merchantData && merchantData.is_telegram_active;
+
+    if (switcherCurrentStoreName) switcherCurrentStoreName.textContent = bName;
+    if (switcherCurrentStoreId) switcherCurrentStoreId.textContent = `#${activeMerchantId}`;
+    if (switcherTgCmd) switcherTgCmd.textContent = `#${activeMerchantId}`;
+    if (switcherInputStoreId) switcherInputStoreId.value = activeMerchantId;
+
+    if (switcherTelegramStatus) {
+      if (isTg) {
+        switcherTelegramStatus.innerHTML = '<span style="color: #0088cc; font-weight: 700;">⚡ Telegram Connected</span>';
+      } else {
+        switcherTelegramStatus.innerHTML = '<span style="color: #e05624; font-weight: 700;">⚠️ Not Linked to Telegram</span>';
+      }
+    }
+
+    loadSwitcherStoresList();
+  }
+  window.openStoreSwitcherModal = openStoreSwitcherModal;
+
+  async function loadSwitcherStoresList() {
+    if (!switcherStoresList) return;
+    switcherStoresList.innerHTML = '<div style="padding: 12px; font-size: 0.85rem; color: var(--color-text-muted);">Loading registered stores...</div>';
+
+    let stores = [];
+    try {
+      const baseUrl = getApiBaseUrl();
+      const resp = await fetch(`${baseUrl}/api/v1/auth/merchants`);
+      if (resp.ok) {
+        const parsed = await safeReadJson(resp);
+        if (parsed && parsed.status === 'success' && parsed.merchants) {
+          stores = parsed.merchants;
+        }
+      }
+    } catch (e) {
+      console.warn('Stores list fetch note:', e);
+    }
+
+    // Default fallback stores if server unreachable
+    if (stores.length === 0) {
+      stores = [
+        { id: "M_MOHITH_6DWS", name: "Mohith's Kirana and General Store", phone: "+919845012345", is_telegram_active: true },
+        { id: "M_MOHITH_KIE2", name: "Mohith's Kirana & General Store", phone: "+918951391999", is_telegram_active: true },
+        { id: "M_MOHITH_A5AN", name: "Yashwanth's Kirana & General Store", phone: "+918951391967", is_telegram_active: false }
+      ];
+    }
+
+    switcherStoresList.innerHTML = '';
+    stores.forEach(st => {
+      const isCurrent = (st.id === activeMerchantId);
+      const row = document.createElement('div');
+      row.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border: 1px solid ${isCurrent ? 'rgba(27,131,84,0.4)' : 'var(--color-border)'}; background: ${isCurrent ? 'rgba(27,131,84,0.06)' : '#FFF'};`;
+      row.innerHTML = `
+        <div>
+          <div style="font-weight: 700; font-size: 0.88rem; color: var(--color-text-title);">
+            ${st.name || 'Retail Store'} ${isCurrent ? '<span style="font-size: 0.72rem; color: #1B8354; font-weight: 700; margin-left: 4px;">● ACTIVE</span>' : ''}
+          </div>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
+            <span class="mono-tag" style="font-size: 0.72rem;">#${st.id}</span>
+            ${st.phone ? ` • ${st.phone}` : ''}
+            ${st.is_telegram_active ? ' • <span style="color: #0088cc; font-weight: 600;">⚡ Telegram Linked</span>' : ''}
+          </div>
+        </div>
+        <div>
+          ${isCurrent ?
+            '<span style="font-size: 0.8rem; font-weight: 700; color: #1B8354;">Selected</span>' :
+            `<button type="button" class="btn-action-sm" style="padding: 4px 10px; font-size: 0.75rem;" onclick="switchToStore('${st.id}')">Switch ➔</button>`
+          }
+        </div>
+      `;
+      switcherStoresList.appendChild(row);
+    });
+  }
+
+  function switchToStore(targetId) {
+    if (!targetId || !targetId.trim()) return;
+    const clean = targetId.trim().toUpperCase();
+    try {
+      localStorage.setItem('sahayak_merchant', JSON.stringify({ merchant_id: clean }));
+    } catch (e) { }
+
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('merchant_id', clean);
+    window.location.href = newUrl.toString();
+  }
+  window.switchToStore = switchToStore;
+
+  if (storeLiveBadge) {
+    storeLiveBadge.addEventListener('click', openStoreSwitcherModal);
+  }
+  if (btnCloseStoreSwitcher) {
+    btnCloseStoreSwitcher.addEventListener('click', () => {
+      if (modalStoreSwitcher) modalStoreSwitcher.style.display = 'none';
+    });
+  }
+  if (btnApplyStoreSwitch) {
+    btnApplyStoreSwitch.addEventListener('click', () => {
+      const val = switcherInputStoreId ? switcherInputStoreId.value : '';
+      if (val) switchToStore(val);
     });
   }
 
