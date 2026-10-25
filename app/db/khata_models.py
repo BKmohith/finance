@@ -105,3 +105,38 @@ class InventoryBatch(Base):
     __table_args__ = (
         Index("idx_inventory_fifo_lookup", "merchant_id", "item_name", "expiry_date", "created_at"),
     )
+
+
+class DailyCashLog(Base):
+    """
+    Daily aggregated cash inflow and outflow log for a merchant.
+    Captures day-of-week retail volatility, weekend surges, salary-week inflows,
+    and supplier payment cliffs to power dynamic 14-day predictive cash forecasting.
+    """
+    __tablename__ = "daily_cash_logs"
+
+    id = Column(String(64), primary_key=True, default=generate_uuid)
+    merchant_id = Column(String(64), nullable=False, index=True)
+    log_date = Column(Date, nullable=False, index=True)
+
+    # Inflows
+    cash_inflow = Column(Float, default=0.0, nullable=False)       # Counter sales, Cash, UPI
+    khata_inflow = Column(Float, default=0.0, nullable=False)      # Customer debt recovery (Udhaar collected)
+    total_inflow = Column(Float, default=0.0, nullable=False)      # cash_inflow + khata_inflow
+
+    # Outflows
+    supplier_outflow = Column(Float, default=0.0, nullable=False)  # Wholesale distributor bills / cheques
+    expense_outflow = Column(Float, default=0.0, nullable=False)   # Rent, electricity, store operational costs
+    total_outflow = Column(Float, default=0.0, nullable=False)     # supplier_outflow + expense_outflow
+
+    # Net movement and cumulative position
+    net_flow = Column(Float, default=0.0, nullable=False)          # total_inflow - total_outflow
+    closing_balance = Column(Float, default=0.0, nullable=False)   # Cumulative settled cash balance
+
+    notes = Column(String(255), nullable=True)                     # e.g., "Weekend surge", "ITC cheque cleared"
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_daily_cash_merchant_date", "merchant_id", "log_date", unique=True),
+    )
+

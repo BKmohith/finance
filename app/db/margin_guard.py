@@ -43,19 +43,34 @@ def evaluate_price_deviations(
         )
     )
     current_items = session.execute(stmt).scalars().all()
+    if not current_items:
+        return []
+
     alerts: List[PriceHikeAlert] = []
 
-    for item in current_items:
-        # 2. Look up the previous wholesale rate for this item
-        # Order by recorded_at descending and PriceHistory.id as deterministic tie-breaker
-        rate_stmt = select(PriceHistory.unit_wholesale_rate).where(
-            and_(
-                PriceHistory.merchant_id == merchant_id,
-                func.lower(func.trim(PriceHistory.item_name)) == func.lower(func.trim(item.item_name))
-            )
-        ).order_by(desc(PriceHistory.recorded_at), desc(PriceHistory.id)).limit(2)
+    # 2. Batch fetch previous wholesale rates in a single query (eliminates N+1 network latency)
+    from collections import defaultdict
+    cleaned_names = list({item.item_name.strip().lower() for item in current_items})
 
-        rates = session.execute(rate_stmt).scalars().all()
+    rate_stmt = select(
+        func.lower(func.trim(PriceHistory.item_name)),
+        PriceHistory.unit_wholesale_rate
+    ).where(
+        and_(
+            PriceHistory.merchant_id == merchant_id,
+            func.lower(func.trim(PriceHistory.item_name)).in_(cleaned_names)
+        )
+    ).order_by(desc(PriceHistory.recorded_at), desc(PriceHistory.id))
+
+    raw_history = session.execute(rate_stmt).all()
+    history_map = defaultdict(list)
+    for name_lower, rate in raw_history:
+        if len(history_map[name_lower]) < 2:
+            history_map[name_lower].append(rate)
+
+    for item in current_items:
+        key = item.item_name.strip().lower()
+        rates = history_map.get(key, [])
 
         # Need at least 2 entries: rates[0] is the current one just added, rates[1] is previous
         if len(rates) >= 2:

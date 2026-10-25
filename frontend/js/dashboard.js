@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const saved = localStorage.getItem('sahayak_merchant');
     if (saved) merchantData = JSON.parse(saved);
-  } catch (e) {}
+  } catch (e) { }
 
   // Determine active merchant ID
   let activeMerchantId = merchantId || (merchantData ? merchantData.merchant_id : '');
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mid = data ? data.merchant_id : activeMerchantId;
     const bName = data ? data.business_name : (merchantData ? merchantData.business_name : 'Retail Store');
     const city = data ? data.city : (merchantData ? merchantData.city : 'Bengaluru');
-    
+
     if (storeText) {
       storeText.textContent = `Store #${mid} • ${bName} (${city})`;
     }
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // WhatsApp reminder action
-  window.dispatchKhataWhatsApp = function(name, phone, amount) {
+  window.dispatchKhataWhatsApp = function (name, phone, amount) {
     const text = `ನಮಸ್ಕಾರ ${name} ಅವರೇ, ನಿಮ್ಮ ಖಾತೆಯ ಒಟ್ಟು ಬಾಕಿ ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ಆಗಿದೆ. ದಯವಿಟ್ಟು ಪಾವತಿಸಿ ಧನ್ಯವಾದಗಳು. (Namaste ${name}, your store khata balance is ₹${amount.toFixed(2)}. Sahayak Retail Ledger)`;
     const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
     if (cleanPhone && cleanPhone.length >= 10) {
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // CSV Export
-  window.exportKhataCSV = function() {
+  window.exportKhataCSV = function () {
     if (!activeDebtorsList || activeDebtorsList.length === 0) {
       alert('No customer khata records to export yet. Extend credit first.');
       return;
@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Determine Day 14 Net Cash & Insights
     const endPoint = trajectory[trajectory.length - 1];
     const finalBalance = endPoint ? endPoint.projected_balance : 0;
-    
+
     if (simDay14Cash) {
       simDay14Cash.textContent = `₹${finalBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
@@ -791,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Quick Amount Preset
-  window.addQuickCash = function(amount) {
+  window.addQuickCash = function (amount) {
     const customItem = {
       id: 'quick_' + Date.now(),
       name: `Counter Quick Item (₹${amount})`,
@@ -945,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const tax = subtotal * 0.05;
     const grandTotal = Math.round(subtotal + tax);
-    const txnRef = `TXN-KN-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${activeBillNo}`;
+    const txnRef = `TXN-KN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${activeBillNo}`;
 
     // Resolve Customer if Udhaar
     let customerName = 'Counter Walk-In';
@@ -1068,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('modalTxnRef').textContent = data.txnRef;
     document.getElementById('modalTxnTotal').textContent = `₹${data.grandTotal.toFixed(2)}`;
-    
+
     let modeText = '⚡ Paytm UPI Soundbox (Zero MDR)';
     if (data.mode === 'cash') modeText = '💵 Counter Cash Collected';
     if (data.mode === 'customer_khata') modeText = `📒 Udhaar Ledger: ${data.customerName}`;
@@ -1216,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fabIconSparkle) fabIconSparkle.style.display = 'inline-block';
       if (fabIconClose) fabIconClose.style.display = 'none';
       if (currentPlayingAudio) {
-        try { currentPlayingAudio.pause(); } catch(e) {}
+        try { currentPlayingAudio.pause(); } catch (e) { }
       }
     }
   }
@@ -1285,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Audio Playback with Sarvam Bulbul and Browser fallback
   function playVoiceResponse(audioBase64, spokenText, lang) {
     if (currentPlayingAudio) {
-      try { currentPlayingAudio.pause(); } catch(e) {}
+      try { currentPlayingAudio.pause(); } catch (e) { }
       currentPlayingAudio = null;
     }
 
@@ -1505,7 +1505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
       try {
         voiceMediaRecorder.stop();
-      } catch (e) {}
+      } catch (e) { }
     } else {
       isVoiceRecording = false;
       updateRecordingUI(false);
@@ -1561,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- 0. EDIT COUNTER INFLOW & DISTRIBUTOR PAYABLES ---
-  window.openEditMetricsModal = function() {
+  window.openEditMetricsModal = function () {
     const editMetricCash = document.getElementById('editMetricCash');
     const editMetricUpi = document.getElementById('editMetricUpi');
     const editMetricSalesCount = document.getElementById('editMetricSalesCount');
@@ -1665,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- A. EDIT STORE PROFILE ---
-  window.openEditStoreModal = function() {
+  window.openEditStoreModal = function () {
     const editStoreName = document.getElementById('editStoreName');
     const editStoreCity = document.getElementById('editStoreCity');
     const editStorePhone = document.getElementById('editStorePhone');
@@ -1734,7 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- B. EDIT SHELF PRODUCT & ADD ITEM ---
-  window.openEditProductModal = function(item = null) {
+  window.openEditProductModal = function (item = null) {
     const title = document.getElementById('modalEditProductTitle');
     const prodName = document.getElementById('editProdName');
     const prodPrice = document.getElementById('editProdPrice');
@@ -1773,12 +1773,12 @@ document.addEventListener('DOMContentLoaded', () => {
     showModal('modalEditProduct');
   };
 
-  window.openEditProductModalById = function(id) {
+  window.openEditProductModalById = function (id) {
     const item = catalogData.find(c => c.id === id);
     window.openEditProductModal(item || null);
   };
 
-  window.openEditProductModalByName = function(name, suggestedPrice = null) {
+  window.openEditProductModalByName = function (name, suggestedPrice = null) {
     let item = catalogData.find(c => c.name.toLowerCase() === name.toLowerCase());
     if (!item) {
       item = { name: name, price: suggestedPrice || 50, cost: (suggestedPrice ? suggestedPrice * 0.85 : 40), stock: 10, batch: 'FIFO-01', unit: 'units' };
@@ -1884,7 +1884,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- C. EDIT CUSTOMER KHATA ACCOUNT ---
-  window.openEditCustomerModal = function(name, phone, balance) {
+  window.openEditCustomerModal = function (name, phone, balance) {
     const editName = document.getElementById('editCustName');
     const editPhone = document.getElementById('editCustPhone');
     const editBalance = document.getElementById('editCustBalance');
@@ -1966,7 +1966,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- D. EDIT SUPPLIER INVOICE & PAYABLES ---
-  window.openEditInvoiceModal = function(number, supplier, amount, dueRaw, status) {
+  window.openEditInvoiceModal = function (number, supplier, amount, dueRaw, status) {
     const editSupp = document.getElementById('editInvSupplier');
     const editNum = document.getElementById('editInvNumber');
     const editAmt = document.getElementById('editInvAmount');
@@ -2030,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAddProductToolbar.addEventListener('click', () => window.openEditProductModal(null));
   }
 
-    // 16. Initial Invocations & Real-Time Sync Polling
+  // 16. Initial Invocations & Real-Time Sync Polling
   renderCatalog();
   renderCart();
   loadLiveDashboardMetrics();

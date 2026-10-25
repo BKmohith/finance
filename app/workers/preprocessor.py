@@ -84,43 +84,53 @@ def preprocess_bill_image(
     image_bytes: bytes,
     enable_deskew: bool = True,
     apply_clahe: bool = True,
-    apply_bilateral: bool = True,
-    output_jpeg_quality: int = 92,
+    apply_bilateral: bool = False,
+    max_dimension: int = 1600,
+    output_jpeg_quality: int = 85,
 ) -> bytes:
     """
-    Executes complete vision enhancement pipeline:
+    Executes high-speed vision enhancement pipeline:
     1. Decodes image bytes.
-    2. Optional auto-deskew using Hough Line Transform.
-    3. Grayscale conversion.
-    4. Bilateral filtering for dot-matrix smoothing without edge blurring.
-    5. CLAHE (Contrast Limited Adaptive Histogram Equalization) for harsh lighting/shadows.
-    6. Re-encodes enhanced image to optimized JPEG bytes for AI consumption.
+    2. Downscales high-resolution camera photos (e.g. 12MP/48MP) to 1600px max dimension (<20ms).
+    3. Fast auto-deskew if noticeable skew (>1.0 deg).
+    4. Grayscale conversion + CLAHE for harsh lighting/shadows.
+    5. Re-encodes enhanced image to lightweight JPEG bytes for fast AI inference.
     """
-    img = decode_image_bytes(image_bytes)
+    try:
+        img = decode_image_bytes(image_bytes)
 
-    # 1. Deskew
-    if enable_deskew:
-        angle = compute_skew_angle(img)
-        if abs(angle) > 0.0:
-            logger.debug("Deskewing bill image by %.2f degrees", angle)
-            img = rotate_image(img, angle)
+        # Fast downscale if photo is huge (e.g. 4000x3000 from mobile camera)
+        h, w = img.shape[:2]
+        if max(h, w) > max_dimension:
+            scale = max_dimension / float(max(h, w))
+            img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
-    # 2. Convert to Grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # 1. Deskew only if noticeable skew (> 1.0 degree)
+        if enable_deskew:
+            angle = compute_skew_angle(img)
+            if abs(angle) > 1.0:
+                logger.debug("Deskewing bill image by %.2f degrees", angle)
+                img = rotate_image(img, angle)
 
-    # 3. Bilateral Filtering for dot-matrix noise suppression
-    if apply_bilateral:
-        gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        # 2. Convert to Grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # 4. CLAHE for localized illumination balancing
-    if apply_clahe:
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        gray = clahe.apply(gray)
+        # 3. Bilateral Filtering (only if explicitly enabled, skipped by default for speed)
+        if apply_bilateral:
+            gray = cv2.bilateralFilter(gray, d=5, sigmaColor=50, sigmaSpace=50)
 
-    # 5. Encode to JPEG
-    encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), output_jpeg_quality]
-    success, encoded_img = cv2.imencode(".jpg", gray, encode_params)
-    if not success:
-        raise RuntimeError("Failed to re-encode preprocessed image to JPEG.")
+        # 4. CLAHE for localized illumination balancing
+        if apply_clahe:
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            gray = clahe.apply(gray)
 
-    return encoded_img.tobytes()
+        # 5. Encode to JPEG
+        encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), output_jpeg_quality]
+        success, encoded_img = cv2.imencode(".jpg", gray, encode_params)
+        if not success:
+            return image_bytes
+
+        return encoded_img.tobytes()
+    except Exception as e:
+        logger.warning(f"Image preprocessing warning: {e}. Falling back to raw bytes.")
+        return image_bytes

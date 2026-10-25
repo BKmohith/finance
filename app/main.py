@@ -424,7 +424,8 @@ async def telegram_long_poll_worker():
                                         merchant_id=m_id,
                                         media_id=med_id,
                                         whatsapp_message_id=f"tg_{m_hash}",
-                                        sender_phone=str(c_id)
+                                        sender_phone=str(c_id),
+                                        image_bytes=img_bytes,
                                     )
 
                                     if res.get("status") == "REJECTED_NON_INVOICE":
@@ -528,6 +529,20 @@ async def telegram_long_poll_worker():
 async def lifespan(app: FastAPI):
     global polling_task
     logger.info(f"Starting {settings.APP_NAME} in [{settings.ENVIRONMENT}] mode...")
+
+    # Pre-warm Supabase PostgreSQL connection pool to eliminate 5s initial SSL handshake delay
+    def _warm_db_pool():
+        try:
+            from app.db.session import engine
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1;"))
+            logger.info("Database connection pool warmed up successfully.")
+        except Exception as e:
+            logger.debug(f"DB pool warmup notice: {e}")
+
+    asyncio.create_task(asyncio.to_thread(_warm_db_pool))
+
     if settings.ENABLE_TELEGRAM_POLLING and not settings.TELEGRAM_BOT_TOKEN.startswith("mock_"):
         polling_task = asyncio.create_task(telegram_long_poll_worker())
     yield

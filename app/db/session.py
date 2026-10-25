@@ -34,11 +34,9 @@ def get_rls_session(merchant_id: str):
     """
     session = SessionLocal()
     try:
-        # Switch to non-bypass role so RLS is strictly enforced
-        session.execute(text("SET LOCAL ROLE authenticated;"))
-        # Set session-scoped merchant identity (transaction-local)
+        # Switch to non-bypass role and set session merchant identity in a single round-trip
         session.execute(
-            text("SELECT set_config('app.current_merchant_id', :m_id, true)"),
+            text("SET LOCAL ROLE authenticated; SELECT set_config('app.current_merchant_id', :m_id, true);"),
             {"m_id": merchant_id}
         )
         yield session

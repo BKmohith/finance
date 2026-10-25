@@ -84,12 +84,13 @@ def process_invoice_task(
     media_id: str,
     whatsapp_message_id: str,
     sender_phone: str,
+    image_bytes: Optional[bytes] = None,
 ) -> Dict[str, Any]:
     """
     Asynchronous Celery pipeline:
-    1. Fetch media bytes
-    2. OpenCV image deskew & enhancement
-    3. Gemini Flash structured vision extraction
+    1. Fetch media bytes (bypassed if in-memory bytes already provided)
+    2. OpenCV image deskew & enhancement (<30ms)
+    3. Gemini Flash structured vision extraction (~2.5s)
     4. Arithmetic guardrail verification
     5. Hand off to Laptop 2's DB repository (with fallback if running isolated)
     6. Trigger margin guard checks & Laptop 1 notifications
@@ -100,10 +101,11 @@ def process_invoice_task(
     )
 
     try:
-        # Step 1: Fetch
-        image_bytes = fetch_media_from_storage_or_meta(media_id)
+        # Step 1: Fetch (use in-memory bytes if provided to avoid 2-3s redundant network re-download)
+        if image_bytes is None:
+            image_bytes = fetch_media_from_storage_or_meta(media_id)
 
-        # Step 2: OpenCV Preprocessing
+        # Step 2: OpenCV Preprocessing (<30ms)
         clean_image_bytes = preprocess_bill_image(image_bytes)
 
         # Step 3: Gemini Structured Vision OCR

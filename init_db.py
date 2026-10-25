@@ -27,6 +27,7 @@ def initialize_database():
         "ALTER TABLE invoice_line_items ENABLE ROW LEVEL SECURITY;",
         "ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;",
         "ALTER TABLE statutory_audit_log ENABLE ROW LEVEL SECURITY;",
+        "ALTER TABLE daily_cash_logs ENABLE ROW LEVEL SECURITY;",
 
         # Policies
         """
@@ -54,6 +55,10 @@ def initialize_database():
 
             DROP POLICY IF EXISTS merchant_isolation_audit ON statutory_audit_log;
             CREATE POLICY merchant_isolation_audit ON statutory_audit_log
+            FOR ALL TO PUBLIC USING (merchant_id = current_setting('app.current_merchant_id', true));
+
+            DROP POLICY IF EXISTS merchant_isolation_daily_cash ON daily_cash_logs;
+            CREATE POLICY merchant_isolation_daily_cash ON daily_cash_logs
             FOR ALL TO PUBLIC USING (merchant_id = current_setting('app.current_merchant_id', true));
         END $$;
         """
